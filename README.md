@@ -13,6 +13,19 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 
 ![The Arrange Desktop panel: Shortcuts tab (left) and Plasmoids tab (right)](docs/panel.png)
 
+A desktop in edit mode, **Shortcuts** tab: the shortcut grid, shortcuts of the
+same size with their icons aligned along each row, the trash snapped to the
+bottom-right corner of the screen.
+
+![Desktop in edit mode, Shortcuts tab](docs/desktop-shortcuts.jpg)
+
+The same desktop, **Plasmoids** tab: the plasmoid grid, the widgets snapped to it.
+
+![Desktop in edit mode, Plasmoids tab](docs/desktop-plasmoids.jpg)
+
+*These two pictures are mock-ups: the grid and the panel are the real
+components, the desktop around them is drawn to look like Plasma's.*
+
 ## Your system is not modified
 
 - plasma-arrange is a **copy of Plasma's original desktop package**
