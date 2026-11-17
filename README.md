@@ -1,5 +1,7 @@
 # plasma-arrange
 
+*Made for myself, offered to anyone who finds it useful.*
+
 Arrange the widgets of the KDE Plasma desktop on grids.
 
 In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
