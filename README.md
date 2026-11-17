@@ -24,9 +24,6 @@ widgets snapped to it.
 
 [![Desktop in edit mode, Plasmoids tab](docs/desktop-plasmoids.jpg)](docs/desktop-plasmoids.jpg?raw=true)
 
-*These two pictures are mock-ups: the grid and the panel are the real
-components, the desktop around them is drawn to look like Plasma's.*
-
 ## Your system is not modified
 
 - plasma-arrange is a **copy of Plasma's original desktop package**
