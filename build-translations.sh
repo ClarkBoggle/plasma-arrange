@@ -11,11 +11,19 @@ DOMAIN=plasma_applet_org.kde.desktopcontainment
 
 cd "$(dirname "$0")"
 
-# Template of our strings (new strings to translate)
+# Template of our strings (new strings to translate). Kept only if something else
+# than its creation date changed: otherwise each install would leave the repository
+# modified, and update-plasma.sh refuses to run then.
+new_template=$(mktemp)
+trap 'rm -f "$new_template"' EXIT
 xgettext --from-code=UTF-8 --language=JavaScript --add-comments=i18n \
     --keyword=i18n:1 --keyword=i18nc:1c,2 --keyword=i18np:1,2 --keyword=i18ncp:1c,2,3 \
-    --package-name=plasma-arrange --output=po/template.pot \
+    --package-name=plasma-arrange --output="$new_template" \
     package/contents/ui/Grid*.qml
+if ! cmp --quiet <(grep -v '^"POT-Creation-Date:' "$new_template") \
+                 <(grep -v '^"POT-Creation-Date:' po/template.pot 2> /dev/null); then
+    cp "$new_template" po/template.pot
+fi
 
 for po in po/*.po; do
     lang=$(basename "$po" .po)
