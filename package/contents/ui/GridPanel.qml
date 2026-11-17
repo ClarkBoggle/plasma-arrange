@@ -279,9 +279,12 @@ KSvg.FrameSvgItem {
                 Layout.fillWidth: true
             }
 
-            // Plasmoids tab: snaps the edges of every plasmoid to their grid
+            // Plasmoids tab: snaps the edges of every plasmoid to their grid.
+            // Only hidden in the Shortcuts tab, so that the panel keeps the same width
+            // in both tabs.
             PlasmaComponents3.Button {
-                visible: gridPanel.plasmoidsTab
+                opacity: gridPanel.plasmoidsTab ? 1 : 0
+                enabled: gridPanel.plasmoidsTab
                 icon.name: "snap-nodes-cusp"
                 text: i18nc("@action:button snap plasmoids to the grid", "Snap to Grid")
                 onClicked: gridPanel.snapPlasmoidsRequested()
