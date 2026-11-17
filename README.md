@@ -14,7 +14,8 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
   resized; *Snap to Grid* aligns and resizes all of them at once.
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
   they were when entering edit mode, on all screens (widgets moved to another
-  screen go back to theirs). Deleted widgets are not recreated.
+  screen go back to theirs). Deleted widgets are not recreated. Both leave edit
+  mode.
 
 Default grids: shortcut cells of 96×92 px with 56 px icons, plasmoid cells of
 16×16 px.
