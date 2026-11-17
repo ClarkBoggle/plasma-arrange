@@ -20,18 +20,18 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 Default grids: shortcut cells of 96×92 px with 56 px icons, plasmoid cells of
 16×16 px.
 
-![The Arrange Desktop panel: Shortcuts tab (left) and Plasmoids tab (right)](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/panel.png)
+![The Arrange Desktop panel: Shortcuts tab (left) and Plasmoids tab (right)](https://github.com/ClarkBoggle/plasma-arrange/blob/assets/panel.png?raw=true)
 
 A desktop in edit mode, **Shortcuts** tab: the shortcut grid, shortcuts of the
 same size with their icons aligned, the trash snapped to the bottom-right
 corner of the screen.
 
-[![Desktop in edit mode, Shortcuts tab](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-shortcuts.jpg)](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-shortcuts.jpg)
+[![Desktop in edit mode, Shortcuts tab](https://github.com/ClarkBoggle/plasma-arrange/blob/assets/desktop-shortcuts.jpg?raw=true)](https://github.com/ClarkBoggle/plasma-arrange/blob/assets/desktop-shortcuts.jpg?raw=true)
 
 The same desktop, **Plasmoids** tab: the plasmoid grid (16×16 cells), the
 widgets snapped to it.
 
-[![Desktop in edit mode, Plasmoids tab](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-plasmoids.jpg)](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-plasmoids.jpg)
+[![Desktop in edit mode, Plasmoids tab](https://github.com/ClarkBoggle/plasma-arrange/blob/assets/desktop-plasmoids.jpg?raw=true)](https://github.com/ClarkBoggle/plasma-arrange/blob/assets/desktop-plasmoids.jpg?raw=true)
 
 ## Your system is not modified
 
