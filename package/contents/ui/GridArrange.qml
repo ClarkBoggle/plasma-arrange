@@ -113,9 +113,12 @@ Item {
     }
 
     // Vertical offset of a shortcut, centered on its cell as if its name took 2 lines:
-    // the same for every shortcut, so that all icons of a row are aligned
+    // the same for every shortcut, so that all icons of a row are aligned.
+    // Never negative: in a cell too low for 2 lines (then every name takes 1 line,
+    // the cell being at least as tall as the tallest shortcut), shortcuts start at
+    // the top of the cell instead of overflowing above it.
     function shortcutOffsetY(iconSize: real, cellHeight: real): real {
-        return Math.round((cellHeight - iconSize - twoLinesName.implicitHeight) / 2);
+        return Math.max(0, Math.round((cellHeight - iconSize - twoLinesName.implicitHeight) / 2));
     }
 
     // Hidden labels, set like the shortcut name: to measure a name at a given width,
