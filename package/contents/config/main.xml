@@ -15,6 +15,19 @@
       <default>false</default>
     </entry>
 
+    <entry name="gridMode" type="Bool">
+      <label>Whether the arrangement grid is shown and widgets snap to it.</label>
+      <default>false</default>
+    </entry>
+    <entry name="gridCellWidth" type="Int">
+      <label>Width of a grid cell, in pixels.</label>
+      <default>112</default>
+    </entry>
+    <entry name="gridCellHeight" type="Int">
+      <label>Height of a grid cell, in pixels.</label>
+      <default>112</default>
+    </entry>
+
     <entry name="ItemsGeometries" type="String" hidden="true">
       <label>Encoded geometries of items (resource categories).</label>
     </entry>

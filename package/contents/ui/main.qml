@@ -54,6 +54,8 @@ ContainmentItem {
     property bool isContainment: Plasmoid.isContainment
     property bool inPanel: (Plasmoid.location !== PlasmaCore.Types.Floating)
     property bool useListViewMode: inPanel && Plasmoid.configuration.viewMode === 0
+    // Grid mode: show the arrangement grid and snap widgets to it (desktop only)
+    property bool gridMode: isContainment && !isFolder && Plasmoid.configuration.gridMode
 
     property Component appletAppearanceComponent
 
@@ -309,19 +311,40 @@ ContainmentItem {
             minimumItemWidth: Kirigami.Units.gridUnit * 3
             minimumItemHeight: minimumItemWidth
 
-            cellWidth: Kirigami.Units.iconSizes.small
-            cellHeight: cellWidth
-            defaultItemWidth: cellWidth * 6
-            defaultItemHeight: cellHeight * 6
+            cellWidth: root.gridMode ? Plasmoid.configuration.gridCellWidth : Kirigami.Units.iconSizes.small
+            cellHeight: root.gridMode ? Plasmoid.configuration.gridCellHeight : cellWidth
+            defaultItemWidth: Kirigami.Units.iconSizes.small * 6
+            defaultItemHeight: Kirigami.Units.iconSizes.small * 6
 
             eventManagerToFilter: (folderViewLayer.item as FolderViewLayer)?.view.view ?? null
 
             appletContainerComponent: ContainmentLayoutManager.BasicAppletContainer {
                 id: appletContainer
 
+                // In grid mode, every widget is put in edit mode (see below),
+                // so it can be dragged right away, without press and hold
                 editModeCondition: Plasmoid.immutable
                     ? ContainmentLayoutManager.ItemContainer.Locked
-                    : ContainmentLayoutManager.ItemContainer.AfterPressAndHold
+                    : (root.gridMode
+                        ? ContainmentLayoutManager.ItemContainer.Manual
+                        : ContainmentLayoutManager.ItemContainer.AfterPressAndHold)
+
+                Component.onCompleted: editMode = root.gridMode
+
+                // A click on an empty area of the desktop takes every widget out of
+                // edit mode (AppletsLayout::handleReleaseEvent): stay in it while in grid mode
+                onEditModeChanged: {
+                    if (root.gridMode && !editMode) {
+                        Qt.callLater(() => appletContainer.editMode = root.gridMode);
+                    }
+                }
+
+                Connections {
+                    target: root
+                    function onGridModeChanged(): void {
+                        appletContainer.editMode = root.gridMode;
+                    }
+                }
 
                 configOverlaySource: "ConfigOverlay.qml"
 
@@ -383,6 +406,14 @@ ContainmentItem {
             }
 
             placeHolder: ContainmentLayoutManager.PlaceHolder {}
+
+            GridLines {
+                anchors.fill: parent
+                z: -1
+                visible: root.gridMode
+                cellWidth: appletsLayout.cellWidth
+                cellHeight: appletsLayout.cellHeight
+            }
 
             component FolderViewLayerLoader: Loader {
                 property bool ready: status === Loader.Ready
@@ -452,6 +483,15 @@ ContainmentItem {
             onTriggered: Plasmoid.containment.configureRequested(Plasmoid)
         }
 
+        PlasmaCore.Action {
+            id: gridModeAction
+            text: i18nc("@action:inmenu", "Arrange on Grid")
+            icon.name: "view-grid"
+            checkable: true
+            checked: Plasmoid.configuration.gridMode
+            onTriggered: Plasmoid.configuration.gridMode = checked
+        }
+
         Component.onCompleted: {
             // Layout bindings need to be set delayed; the intermediate steps as the other bindings happen cause loops
             Qt.callLater( () => {
@@ -469,6 +509,10 @@ ContainmentItem {
             }
 
             Plasmoid.setInternalAction("configure", configAction)
+
+            if (!root.isFolder) {
+                Plasmoid.contextualActions = [gridModeAction]
+            }
         }
     }
 }
