@@ -143,8 +143,9 @@ Line numbers are those of our version.
 
 The layout rounds the position and size of every widget to whole cells, which
 shrank the shortcut icons. With 1 px cells it rounds nothing, and `GridArrange`
-does the snapping. While a widget is moved, the cells are huge: otherwise the
-layout recomputes its green placeholder at every pixel, and moving is jerky.
+does the snapping. While a widget is moved (or one from another screen is
+dragged over the desktop), the cells are huge: otherwise the layout recomputes
+its green placeholder at every pixel, and moving is jerky.
 The minimum size (16 px) does not enlarge small shortcuts; the default size,
 previously computed from the cells, is unchanged.
 
