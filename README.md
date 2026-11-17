@@ -1,6 +1,6 @@
 # plasma-arrange
 
-*Made for myself, offered to anyone who finds it useful.*
+*Made for myself with AI, offered to anyone who finds it useful.*
 
 Arrange the widgets of the KDE Plasma desktop on grids.
 
@@ -227,5 +227,7 @@ biological eyes, approved by my dog 🐾
 
 ## License
 
-The package is derived from Plasma's desktop containment, licensed under the
-GPL (version 2 or later).
+GPL version 2 or later, the license of Plasma's desktop containment, from which
+the package is derived: see [LICENSE](LICENSE). Two unchanged Plasma files
+(`ActionButton.qml`, `ConfigOverlay.qml`) are under the LGPL version 2 or later,
+as their headers say.
