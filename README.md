@@ -95,9 +95,9 @@ updates. After updating Plasma, from the cloned repository:
 
 Seeing a new Plasma version, it runs `./update-plasma.sh` first (which can also
 be run directly): it takes the new system package, applies the grid arrangement
-to it again (git merge from the `upstream` branch, which holds the unmodified
-Plasma packages) and reinstalls. If the changes conflict with the new version,
-it removes the installed copy (Plasma then uses its own package) and stops.
+to it again and reinstalls. If the changes conflict with the new version, it
+removes the installed copy and stops: Plasma uses its own desktop until
+plasma-arrange is updated for that version.
 
 ## Files
 
@@ -115,7 +115,7 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 | `po/template.pot`, `po/fr.po` | Strings to translate, French translation |
 | `install.sh`, `uninstall.sh` | Installation, uninstallation |
 | `build-translations.sh` | Builds the translations (called by `install.sh`) |
-| `update-plasma.sh` | Update after a Plasma update |
+| `update-plasma.sh` | Update after a Plasma update (called by `install.sh`) |
 
 **Modified**
 
@@ -134,7 +134,7 @@ The pictures of this README, and the scenes they are rendered from, are on the
 `main.qml` is the main file of Plasma's desktop. It is kept as close to the
 original as possible: it only connects the desktop to `GridArrange` and to the
 panel, all the logic is in `GridArrange.qml`. These lines must be carried over
-when a Plasma update changes `main.qml` (`update-plasma.sh` lets git do it).
+when a Plasma update changes `main.qml` (`update-plasma.sh` does it).
 
 In total: 57 lines added (12 of them comments), 5 lines of Plasma changed.
 Line numbers are those of the modified `main.qml`.
