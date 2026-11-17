@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the kde-overlay package.
+# This file is distributed under the same license as the plasma-arrange package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: kde-overlay\n"
+"Project-Id-Version: plasma-arrange\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 06:02+0100\n"
+"POT-Creation-Date: 2026-11-17 06:06+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -57,17 +57,17 @@ msgctxt "@info screen edges the widgets snap to"
 msgid "(Right and Bottom)"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:286
+#: package/contents/ui/GridPanel.qml:289
 msgctxt "@action:button snap plasmoids to the grid"
 msgid "Snap to Grid"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:301
+#: package/contents/ui/GridPanel.qml:304
 msgctxt "@action:button keep the changes and leave grid mode"
 msgid "Save"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:307
+#: package/contents/ui/GridPanel.qml:310
 msgctxt "@action:button undo all changes and leave grid mode"
 msgid "Cancel"
 msgstr ""

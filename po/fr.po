@@ -1,14 +1,12 @@
-# French translations for kde-overlay package
-# Traductions françaises du paquet kde-overlay.
-# Copyright (C) 2026 THE kde-overlay'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the kde-overlay package.
+# French translation of plasma-arrange.
+# This file is distributed under the same license as the plasma-arrange package.
 # Automatically generated, 2026.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: kde-overlay\n"
+"Project-Id-Version: plasma-arrange\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 06:02+0100\n"
+"POT-Creation-Date: 2026-11-17 06:06+0100\n"
 "PO-Revision-Date: 2026-11-17 06:02+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -21,7 +19,7 @@ msgstr ""
 #: package/contents/ui/GridPanel.qml:104
 msgctxt "@title"
 msgid "Arrange"
-msgstr "Ranger"
+msgstr "Agencer"
 
 #: package/contents/ui/GridPanel.qml:129
 msgctxt "@title:tab desktop shortcuts (Icon widgets)"
@@ -58,17 +56,17 @@ msgctxt "@info screen edges the widgets snap to"
 msgid "(Right and Bottom)"
 msgstr "(droit et bas)"
 
-#: package/contents/ui/GridPanel.qml:286
+#: package/contents/ui/GridPanel.qml:289
 msgctxt "@action:button snap plasmoids to the grid"
 msgid "Snap to Grid"
 msgstr "Aligner sur la grille"
 
-#: package/contents/ui/GridPanel.qml:301
+#: package/contents/ui/GridPanel.qml:304
 msgctxt "@action:button keep the changes and leave grid mode"
 msgid "Save"
 msgstr "Enregistrer"
 
-#: package/contents/ui/GridPanel.qml:307
+#: package/contents/ui/GridPanel.qml:310
 msgctxt "@action:button undo all changes and leave grid mode"
 msgid "Cancel"
 msgstr "Annuler"

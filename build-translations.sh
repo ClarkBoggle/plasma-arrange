@@ -14,7 +14,7 @@ cd "$(dirname "$0")"
 # Template of our strings (new strings to translate)
 xgettext --from-code=UTF-8 --language=JavaScript --add-comments=i18n \
     --keyword=i18n:1 --keyword=i18nc:1c,2 --keyword=i18np:1,2 --keyword=i18ncp:1c,2,3 \
-    --package-name=kde-overlay --output=po/template.pot \
+    --package-name=plasma-arrange --output=po/template.pot \
     package/contents/ui/Grid*.qml
 
 for po in po/*.po; do
