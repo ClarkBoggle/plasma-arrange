@@ -268,27 +268,33 @@ Item {
         showPlaceHolder(dropGeometry(item, position));
     }
 
-    // A shortcut added in grid mode (moved from another screen, or created by a drop)
-    // is placed by the layout where it was dropped, with its former size: it gets the
-    // shortcut size of this desktop, on the nearest cell. Once the layout has placed it.
+    // A widget added in grid mode (moved from another screen, or created by a drop)
+    // is placed by the layout where it was dropped, off the grid. Once the layout has
+    // placed it: a shortcut gets the shortcut size of this desktop, on the nearest
+    // cell; a plasmoid keeps its size, on the nearest plasmoid grid lines.
     Connections {
         target: Plasmoid
         function onAppletAdded(applet: var): void {
             if (grid.active) {
-                Qt.callLater(grid.snapAddedShortcut, applet.id);
+                Qt.callLater(grid.snapAddedWidget, applet.id);
             }
         }
     }
 
-    function snapAddedShortcut(appletId: int): void {
+    function snapAddedWidget(appletId: int): void {
         const item = widgets().find(item => item.applet.plasmoid.id === appletId);
-        if (!item || !isShortcut(item)) {
+        if (!item) {
             return;
         }
-        // Keeps the shortcut centered where it was dropped
-        const size = shortcutSize(item.applet.plasmoid.title, config.gridCellWidth, config.gridIconSize);
-        const position = Qt.point(item.x + (item.width - size.width) / 2, item.y + (item.height - size.height) / 2);
-        setGeometry(item, dropGeometry(item, position));
+        if (isShortcut(item)) {
+            // Keeps the shortcut centered where it was dropped
+            const size = shortcutSize(item.applet.plasmoid.title, config.gridCellWidth, config.gridIconSize);
+            const position = Qt.point(item.x + (item.width - size.width) / 2, item.y + (item.height - size.height) / 2);
+            setGeometry(item, dropGeometry(item, position));
+        } else {
+            item.x = snap(item.x, 0, config.gridPlasmoidCellWidth, appletsLayout.width - item.width);
+            item.y = snap(item.y, 0, config.gridPlasmoidCellHeight, appletsLayout.height - item.height);
+        }
         saveLater();
     }
 
