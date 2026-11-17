@@ -220,7 +220,8 @@ The *Arrange Desktop* panel, at the top center, shown in edit mode.
 
 ## Credits
 
-Written with [Claude Code](https://claude.com/claude-code).
+Written with [Claude Code](https://claude.com/claude-code), reviewed by
+biological eyes, approved by my dog 🐾
 
 ## License
 
