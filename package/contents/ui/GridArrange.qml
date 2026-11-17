@@ -19,7 +19,8 @@ import "GridDrag.js" as GridDrag
 //   a fixed icon size, centered in their cell.
 // - The other widgets (plasmoids) snap to the plasmoid grid and keep their size.
 // - Shortcuts cannot be resized by hand (they have the size of the grid);
-//   plasmoids can, freely ("Snap to Grid" fits them to their grid).
+//   plasmoids can, their edges snapped to their grid.
+// - Shortcuts do not overlap each other, nor plasmoids each other.
 // - Only the kind of widget of the tab shown in the grid panel can be moved;
 //   a click on a widget of the other kind shows its tab.
 // - Widgets moved to another screen are snapped to the grids of that screen.
@@ -96,12 +97,14 @@ Item {
         return item.applet?.plasmoid.pluginName === "org.kde.plasma.icon";
     }
 
-    // In grid mode, the widgets of the other tab are locked: no handles, no clicks
+    // In grid mode, the widgets of the other tab are locked: hoverBlocker takes
+    // their clicks, so they are never selected nor moved
     function isLocked(item: Item): bool {
         return active && isShortcut(item) === plasmoidsTab;
     }
 
-    // Each widget tells when it is selected or moved, and when it gets its handles
+    // Each widget tells when it is selected, moved or resized, and when it gets its
+    // handles
     // (connected once per widget). All the applet containers are watched, even
     // without their applet yet: a widget coming from another screen gets its
     // container added to the layout first, and its applet only after (no new
@@ -117,6 +120,8 @@ Item {
                 item.editModeChanged.connect(() => grid.widgetEditModeChanged(item));
                 item.dragActiveChanged.connect(() => grid.widgetMovingChanged(item, item.dragActive));
                 item.configOverlayItemChanged.connect(() => grid.widgetHandlesChanged(item));
+                item.widthChanged.connect(() => grid.widgetResized(item));
+                item.heightChanged.connect(() => grid.widgetResized(item));
             }
         }
     }
@@ -266,14 +271,6 @@ Item {
         setShortcutGrid(config.gridCellWidth, config.gridCellHeight, config.gridIconSize);
     }
 
-    // After a shortcut drop: once the drop animation is over, as positions are read
-    // from the shortcuts
-    Timer {
-        id: refitTimer
-        interval: Kirigami.Units.longDuration
-        onTriggered: grid.refitShortcuts()
-    }
-
     // Largest icon size keeping every shortcut inside its cell: not wider than the
     // cell, and not taller than the cell with the tallest name (at the cell width)
     function largestIconSize(cellWidth: real, cellHeight: real): int {
@@ -305,10 +302,20 @@ Item {
         return Qt.rect(left, top, right - left, bottom - top);
     }
 
+    // "Snap to Grid": snaps every plasmoid, one after the other. One that would
+    // then overlap another (rounding can make two plasmoids side by side overlap
+    // by a cell) goes to the nearest free place. The geometries are kept in a list:
+    // the plasmoids slide to their new place (main.qml), their x and y are not
+    // there yet.
     function snapAllPlasmoids(): void {
-        for (const item of widgets().filter(item => !isShortcut(item))) {
-            setGeometry(item, snappedPlasmoidGeometry(item));
-        }
+        const plasmoids = widgets().filter(item => !isShortcut(item));
+        const geometries = plasmoids.map(item => Qt.rect(item.x, item.y, item.width, item.height));
+        plasmoids.forEach((item, i) => {
+            const others = geometries.filter((geometry, j) => j !== i);
+            geometries[i] = freeGeometry(snappedPlasmoidGeometry(item), others,
+                                         0, config.gridPlasmoidCellWidth, 0, config.gridPlasmoidCellHeight);
+            setGeometry(item, geometries[i]);
+        });
         saveLater();
     }
 
@@ -381,54 +388,106 @@ Item {
         const geometry = dropGeometry(item, dragPosition);
         setGeometry(item, geometry);
         saveLater();
-        if (isShortcut(item)) {
-            refitTimer.restart();
-        } else {
-            droppedPlasmoid = item;
-            droppedGeometry = geometry;
-            dropEndTimer.restart();
-        }
+        droppedWidget = item;
+        droppedGeometry = geometry;
+        dropEndTimer.restart();
     }
 
     // Where a widget dropped at this position goes: shortcuts get the shortcut size,
     // centered on the nearest cell; plasmoids keep their size, on the nearest
-    // plasmoid grid lines; both stick to the right/bottom edge if it is closer
+    // plasmoid grid lines; both stick to the right/bottom edge if it is closer, and
+    // do not go over a widget of their kind (see freeGeometry())
     function dropGeometry(item: Item, position: point): rect {
-        return dropGeometryOf(isShortcut(item), item.applet.plasmoid.title, sizeBeforeDrag, position);
+        return dropGeometryOf(isShortcut(item), item.applet.plasmoid.title, sizeBeforeDrag, position, item);
     }
 
     // The same for a widget known by its kind, its name (shortcut) and its size
-    // (plasmoid): a widget coming from another screen
-    function dropGeometryOf(shortcut: bool, title: string, plasmoidSize: size, position: point): rect {
+    // (plasmoid): a widget coming from another screen (moved: null)
+    function dropGeometryOf(shortcut: bool, title: string, plasmoidSize: size, position: point,
+                            moved: Item): rect {
         if (shortcut) {
             const size = shortcutSize(title, config.gridCellWidth, config.gridIconSize);
-            const x = snap(position.x, shortcutOffsetX(size.width, config.gridCellWidth),
-                           config.gridCellWidth, appletsLayout.width - size.width);
-            const y = snap(position.y, shortcutOffsetY(config.gridIconSize, config.gridCellHeight),
-                           config.gridCellHeight, appletsLayout.height - size.height);
-            return Qt.rect(x, y, size.width, size.height);
+            const offsetX = shortcutOffsetX(size.width, config.gridCellWidth);
+            const offsetY = shortcutOffsetY(config.gridIconSize, config.gridCellHeight);
+            const x = snap(position.x, offsetX, config.gridCellWidth, appletsLayout.width - size.width);
+            const y = snap(position.y, offsetY, config.gridCellHeight, appletsLayout.height - size.height);
+            return freeGeometry(Qt.rect(x, y, size.width, size.height), otherWidgets(true, moved),
+                                offsetX, config.gridCellWidth, offsetY, config.gridCellHeight);
         }
         const x = snap(position.x, 0, config.gridPlasmoidCellWidth, appletsLayout.width - plasmoidSize.width);
         const y = snap(position.y, 0, config.gridPlasmoidCellHeight, appletsLayout.height - plasmoidSize.height);
-        return Qt.rect(x, y, plasmoidSize.width, plasmoidSize.height);
+        return freeGeometry(Qt.rect(x, y, plasmoidSize.width, plasmoidSize.height), otherWidgets(false, moved),
+                            0, config.gridPlasmoidCellWidth, 0, config.gridPlasmoidCellHeight);
     }
 
-    // A dropped plasmoid slides to its place (animation in main.qml), and the layout
-    // places it once more during the slide, rounding its position: off the grid.
-    // Once the slide is over, it is put back where it was dropped. (Shortcuts are
-    // all refitted after a drop anyway.)
-    property Item droppedPlasmoid: null
+    // Widgets of a kind do not overlap: a widget over another one goes to the
+    // nearest place on its grid (lines shifted by the offsets), or on the
+    // right/bottom edge, where it overlaps none of the others. It stays where it is
+    // if it overlaps none, or if there is no such place.
+    function freeGeometry(geometry: rect, others: var, offsetX: real, cellWidth: real,
+                          offsetY: real, cellHeight: real): rect {
+        if (!overlapsAny(geometry, others)) {
+            return geometry;
+        }
+        const xs = gridLines(offsetX, cellWidth, appletsLayout.width - geometry.width);
+        const ys = gridLines(offsetY, cellHeight, appletsLayout.height - geometry.height);
+        let nearest = geometry;
+        let nearestDistance = Infinity;
+        for (const x of xs) {
+            for (const y of ys) {
+                const distance = (x - geometry.x) ** 2 + (y - geometry.y) ** 2;
+                const candidate = Qt.rect(x, y, geometry.width, geometry.height);
+                if (distance < nearestDistance && !overlapsAny(candidate, others)) {
+                    nearest = candidate;
+                    nearestDistance = distance;
+                }
+            }
+        }
+        return nearest;
+    }
+
+    // Geometries of the shortcuts or of the plasmoids, but this widget (moved: the
+    // widget itself if it is on this desktop, otherwise null)
+    function otherWidgets(shortcuts: bool, moved: Item): var {
+        return widgets().filter(item => isShortcut(item) === shortcuts && item !== moved)
+            .map(item => Qt.rect(item.x, item.y, item.width, item.height));
+    }
+
+    // The geometry overlaps one of these (more than by rounding errors)
+    function overlapsAny(geometry: rect, others: var): bool {
+        return others.some(other =>
+            Math.min(geometry.x + geometry.width, other.x + other.width) - Math.max(geometry.x, other.x) > 1
+            && Math.min(geometry.y + geometry.height, other.y + other.height) - Math.max(geometry.y, other.y) > 1);
+    }
+
+    // Grid lines from offset to max, and max itself when snapping to the screen edges
+    function gridLines(offset: real, cellSize: real, max: real): var {
+        const lines = [];
+        for (let line = Math.max(0, offset); line <= max; line += cellSize) {
+            lines.push(line);
+        }
+        if (config.gridSnapToEdges && max >= 0 && lines[lines.length - 1] !== max) {
+            lines.push(max);
+        }
+        return lines;
+    }
+
+    // A dropped widget slides to its place (animation in main.qml), and the layout
+    // places it once more during the slide, elsewhere if it sees no free space there.
+    // Once the slide is over, it is put back where it was dropped. The same after a
+    // plasmoid resize.
+    property Item droppedWidget: null
     property rect droppedGeometry
 
     Timer {
         id: dropEndTimer
         interval: Kirigami.Units.longDuration
         onTriggered: {
-            if (grid.droppedPlasmoid) {
-                grid.setGeometry(grid.droppedPlasmoid, grid.droppedGeometry);
+            if (grid.droppedWidget) {
+                grid.setGeometry(grid.droppedWidget, grid.droppedGeometry);
                 grid.saveLater();
             }
-            grid.droppedPlasmoid = null;
+            grid.droppedWidget = null;
         }
     }
 
@@ -439,6 +498,7 @@ Item {
     // The handles of a widget are created when it is first selected
     function widgetHandlesChanged(item: Item): void {
         removeResizeHandles(item);
+        watchResizeHandles(item);
         watchMoveBar(item);
     }
 
@@ -465,6 +525,50 @@ Item {
             }
         }
         return null;
+    }
+
+    // A plasmoid resized with its handles: the placeholder shows its edges snapped
+    // to the grid, applied when the handle is released (snapping at every mouse
+    // move would be jerky). Over another plasmoid, it gets back the geometry it had
+    // before. The handle tells it is released before the layout places the
+    // plasmoid: put back once the layout is done (see dropEndTimer).
+    property Item resizedPlasmoid: null
+    property rect geometryBeforeResize
+
+    function watchResizeHandles(item: Item): void {
+        for (const handle of item.configOverlayItem?.children ?? []) {
+            if (handle.resizeCorner !== undefined) {
+                handle.pressedChanged.connect(() => grid.resizeHandlePressedChanged(item, handle.pressed));
+            }
+        }
+    }
+
+    function resizeHandlePressedChanged(item: Item, pressed: bool): void {
+        if (!active || isShortcut(item)) {
+            return;
+        }
+        if (pressed) {
+            resizedPlasmoid = item;
+            geometryBeforeResize = Qt.rect(item.x, item.y, item.width, item.height);
+            return;
+        }
+        resizedPlasmoid = null;
+        appletsLayout.hidePlaceHolder();
+        droppedWidget = item;
+        droppedGeometry = resizedGeometry(item);
+        Qt.callLater(grid.setGeometry, item, droppedGeometry);
+        dropEndTimer.restart();
+    }
+
+    function widgetResized(item: Item): void {
+        if (item === resizedPlasmoid) {
+            showPlaceHolder(resizedGeometry(item), false);
+        }
+    }
+
+    function resizedGeometry(item: Item): rect {
+        const geometry = snappedPlasmoidGeometry(item);
+        return overlapsAny(geometry, otherWidgets(false, item)) ? geometryBeforeResize : geometry;
     }
 
     // Shortcuts have the size of the shortcut grid: no resize handles
@@ -517,7 +621,7 @@ Item {
             : Qt.size(widget.width, widget.height);
         const position = Qt.point(event.x - widget.grabX * size.width / widget.width,
                                   event.y - widget.grabY * size.height / widget.height);
-        incomingGeometry = dropGeometryOf(widget.shortcut, widget.title, size, position);
+        incomingGeometry = dropGeometryOf(widget.shortcut, widget.title, size, position, null);
         showPlaceHolder(incomingGeometry, widget.shortcut);
         // Only the kind of widget of the tab shown can be dropped
         panel.showTab(!widget.shortcut);
@@ -573,7 +677,15 @@ Item {
     // off the grid. From another screen, it is put where the placeholder showed
     // (geometry), with the rotation it had (its new container has none).
     // Otherwise (created by a drop, for instance), a shortcut gets the shortcut size
-    // on the nearest cell, a plasmoid the nearest grid lines.
+    // on the nearest cell, a plasmoid the nearest grid lines. A new plasmoid gets
+    // the size Plasma would give it with its own minimum size (see
+    // plasmaMinimumItemSize).
+    // Minimum widget size of Plasma's layout, lowered to 16 px for small shortcuts
+    // (see main.qml). A new widget gets the size it asks for if larger than the
+    // minimum, otherwise the default size: with 16 px, some plasmoids asked for
+    // 27 px and stayed that small.
+    readonly property real plasmaMinimumItemSize: Kirigami.Units.gridUnit * 3
+
     function placeAddedWidget(appletId: int, geometry: var, rotation: real): void {
         const item = widgets().find(item => item.applet.plasmoid.id === appletId);
         if (!item) {
@@ -594,8 +706,11 @@ Item {
                                       item.y + (item.height - size.height) / 2);
             setGeometry(item, dropGeometry(item, position));
         } else {
-            item.x = snap(item.x, 0, config.gridPlasmoidCellWidth, appletsLayout.width - item.width);
-            item.y = snap(item.y, 0, config.gridPlasmoidCellHeight, appletsLayout.height - item.height);
+            const size = item.initialSize.width > plasmaMinimumItemSize
+                      && item.initialSize.height > plasmaMinimumItemSize
+                ? item.initialSize
+                : Qt.size(appletsLayout.defaultItemWidth, appletsLayout.defaultItemHeight);
+            setGeometry(item, dropGeometryOf(false, "", size, Qt.point(item.x, item.y), item));
         }
         saveLater();
     }
@@ -693,11 +808,12 @@ Item {
         }
     }
 
-    // The locked widget at this point of the layout (the topmost one), if no unlocked
-    // one is there
+    // The widget at this point of the layout if it is locked (the topmost one: the
+    // last child is drawn above)
     function lockedWidgetAt(x: real, y: real): Item {
         const items = widgets().filter(item => item.contains(appletsLayout.mapToItem(item, x, y)));
-        return items.some(item => !isLocked(item)) ? null : (items[items.length - 1] ?? null);
+        const top = items[items.length - 1];
+        return top && isLocked(top) ? top : null;
     }
 
     // The selected widget, above hoverBlocker, would get the clicks once locked

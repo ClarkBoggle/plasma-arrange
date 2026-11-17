@@ -321,8 +321,7 @@ ContainmentItem {
             appletContainerComponent: ContainmentLayoutManager.BasicAppletContainer {
                 id: appletContainer
 
-                // Grid arrangement: the widgets of the other tab are locked
-                editModeCondition: (Plasmoid.immutable || gridArrange.isLocked(appletContainer))
+                editModeCondition: Plasmoid.immutable
                     ? ContainmentLayoutManager.ItemContainer.Locked
                     : ContainmentLayoutManager.ItemContainer.AfterPressAndHold
 

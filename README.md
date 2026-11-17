@@ -9,11 +9,11 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
   Each shortcut's height takes into account the number of lines of its name
   (1 or 2), so that its icon keeps exactly the chosen size.\
   The grid and shortcut sizes limit each other, so that no shortcut overflows
-  its cell. They cannot be resized by hand; *Snap to Grid* puts them all back
-  on their cells.
-- **Plasmoids** tab: the other widgets snap to their own grid when moved, and
-  keep the size given by hand; *Snap to Grid* aligns and resizes all of them at
-  once.
+  its cell. They cannot be resized by hand, and do not overlap each other;
+  *Snap to Grid* puts them all back on their cells.
+- **Plasmoids** tab: the other widgets snap to their own grid when moved or
+  resized, without overlapping each other; *Snap to Grid* aligns and resizes all
+  of them at once, still without overlapping.
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
   they were when entering edit mode, on all screens (widgets moved to another
   screen go back to theirs). Deleted widgets are not recreated. Both leave edit
@@ -134,12 +134,13 @@ The pictures of this README, and the scenes they are rendered from, are on the
 ## Changes to main.qml
 
 `main.qml` is the main file of Plasma's desktop. It is kept as close to the
-original as possible: it only sets the layout cells, locks widgets and creates
-`GridArrange` and the panel; all the logic is in `GridArrange.qml`, which also
-connects to the widgets and to the panel itself. These lines must be carried over
-when a Plasma update changes `main.qml` (`update-plasma.sh` does it).
+original as possible: it only sets the layout cells, passes on widget moves and
+creates `GridArrange` and the panel; all the logic is in `GridArrange.qml`, which
+also connects to the widgets and to the panel itself (and locks the widgets of
+the other tab). These lines must be carried over when a Plasma update changes
+`main.qml` (`update-plasma.sh` does it).
 
-In total: 25 lines added (6 of them comments), 5 lines of Plasma changed.
+In total: 24 lines added (5 of them comments), 4 lines of Plasma changed.
 Line numbers are those of the modified `main.qml`.
 
 **1. Layout cells** (line 309)
@@ -168,22 +169,7 @@ previously computed from the cells, is unchanged.
 +            defaultItemHeight: Kirigami.Units.iconSizes.small * 6
 ```
 
-**2. Locking each widget** (line 324)
-
-The widgets of the other tab are locked: no handles. `GridArrange` takes their
-clicks too (a click on a shortcut would launch it) and shows their tab instead, and connects itself to each
-widget to know when it is selected or moved, and to remove the resize handles of
-shortcuts.
-
-```diff
--                editModeCondition: Plasmoid.immutable
-+                // Grid arrangement: the widgets of the other tab are locked
-+                editModeCondition: (Plasmoid.immutable || gridArrange.isLocked(appletContainer))
-                     ? ContainmentLayoutManager.ItemContainer.Locked
-                     : ContainmentLayoutManager.ItemContainer.AfterPressAndHold
-```
-
-**3. While dragging** (line 364)
+**2. While dragging** (line 363)
 
 The position is passed on, so that the green placeholder shows the snapped place,
 and the point where the mouse holds the widget, for a move to another screen.
@@ -198,7 +184,7 @@ leaves for another screen.
                      const pos = mapToItem(root.parent, dragCenter.x, dragCenter.y);
 ```
 
-**4. The `GridArrange` instance** (line 393, after `placeHolder`)
+**3. The `GridArrange` instance** (line 392, after `placeHolder`)
 
 Below the widgets; active only in edit mode, on a *Desktop* layout (not
 Folder View). It gets the panel: it follows and changes its tab, and handles its
@@ -215,7 +201,7 @@ settings and buttons.
 +            }
 ```
 
-**5. The `GridPanel` instance** (line 470, before `Component.onCompleted`)
+**4. The `GridPanel` instance** (line 470, before `Component.onCompleted`)
 
 The *Arrange Desktop* panel, at the top center, shown in edit mode.
 
