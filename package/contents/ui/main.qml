@@ -61,6 +61,58 @@ ContainmentItem {
     // Whether a widget is being moved in grid mode (see the cells of the applets layout)
     property bool movingWidget: false
 
+    // Layout when grid mode started, restored by "Cancel" in the grid panel:
+    // geometry of every widget (by applet id) and the grid settings
+    property var layoutBeforeGridMode: null
+
+    onGridModeChanged: {
+        if (gridMode) {
+            layoutBeforeGridMode = saveCurrentLayout();
+        }
+    }
+
+    function saveCurrentLayout(): var {
+        const config = Plasmoid.configuration;
+        const geometries = {};
+        for (const item of appletsLayout.children) {
+            if (item.isShortcut !== undefined && item.applet) {
+                geometries[item.applet.plasmoid.id] = Qt.rect(item.x, item.y, item.width, item.height);
+            }
+        }
+        return {
+            geometries: geometries,
+            settings: {
+                gridCellWidth: config.gridCellWidth,
+                gridCellHeight: config.gridCellHeight,
+                gridIconSize: config.gridIconSize,
+                gridPlasmoidCellWidth: config.gridPlasmoidCellWidth,
+                gridPlasmoidCellHeight: config.gridPlasmoidCellHeight,
+            },
+        };
+    }
+
+    // Puts every widget back where it was when grid mode started, with the grid
+    // settings of that time, then leaves edit mode
+    function cancelGridMode(): void {
+        const saved = layoutBeforeGridMode;
+        if (saved) {
+            for (const item of appletsLayout.children) {
+                const geometry = item.applet ? saved.geometries[item.applet.plasmoid.id] : undefined;
+                if (item.isShortcut !== undefined && geometry) {
+                    item.x = geometry.x;
+                    item.y = geometry.y;
+                    item.width = geometry.width;
+                    item.height = geometry.height;
+                }
+            }
+            for (const key in saved.settings) {
+                Plasmoid.configuration[key] = saved.settings[key];
+            }
+            saveLayoutLater();
+        }
+        Plasmoid.containment.corona.editMode = false;
+    }
+
     // On the grid, a shortcut (Icon widget) is as wide as its cell (room for its name),
     // has the chosen icon size, and is centered vertically in its cell.
     // The Icon widget gives its icon the frame width × (frame height minus the name):
@@ -780,6 +832,7 @@ ContainmentItem {
             largestShortcutSize: root.largestShortcutSize
             largestIconSize: root.largestIconSize
             onSnapPlasmoidsRequested: root.snapAllPlasmoids()
+            onCancelRequested: root.cancelGridMode()
             onGridChangeRequested: (cellWidth, cellHeight, iconSize) => root.changeGrid(cellWidth, cellHeight, iconSize)
         }
 

@@ -12,13 +12,18 @@ import org.kde.kirigami as Kirigami
 
 // Small floating panel shown in grid mode (desktop edit mode), to set up the grid.
 // It can be moved by dragging its title.
+// The interface stays in English: the i18n contexts end with "grid panel" so that
+// no existing translation of the desktop containment is picked up.
 KSvg.FrameSvgItem {
     id: gridPanel
 
     imagePath: "widgets/background"
 
-    width: content.implicitWidth + margins.left + margins.right
-    height: content.implicitHeight + margins.top + margins.bottom
+    // Inner room around the content, besides the frame margins
+    readonly property real padding: Kirigami.Units.largeSpacing
+
+    width: Math.max(content.implicitWidth, Kirigami.Units.gridUnit * 14) + margins.left + margins.right + 2 * padding
+    height: content.implicitHeight + margins.top + margins.bottom + 2 * padding
 
     // Whether the Plasmoids tab is shown: the desktop then shows the plasmoid grid
     readonly property bool plasmoidsTab: tabBar.currentIndex === 1
@@ -29,6 +34,8 @@ KSvg.FrameSvgItem {
     property var largestIconSize
 
     signal snapPlasmoidsRequested()
+    // Puts everything back as it was when grid mode started
+    signal cancelRequested()
 
     // New cell size or icon size chosen in the panel: the grid and the shortcuts follow
     signal gridChangeRequested(int cellWidth, int cellHeight, int iconSize)
@@ -52,13 +59,13 @@ KSvg.FrameSvgItem {
 
         anchors {
             fill: parent
-            leftMargin: gridPanel.margins.left
-            topMargin: gridPanel.margins.top
-            rightMargin: gridPanel.margins.right
-            bottomMargin: gridPanel.margins.bottom
+            leftMargin: gridPanel.margins.left + gridPanel.padding
+            topMargin: gridPanel.margins.top + gridPanel.padding
+            rightMargin: gridPanel.margins.right + gridPanel.padding
+            bottomMargin: gridPanel.margins.bottom + gridPanel.padding
         }
 
-        spacing: Kirigami.Units.smallSpacing
+        spacing: Kirigami.Units.largeSpacing
 
         // Title, also used to move the panel
         RowLayout {
@@ -73,7 +80,7 @@ KSvg.FrameSvgItem {
             Kirigami.Heading {
                 Layout.fillWidth: true
                 level: 4
-                text: i18nc("@title", "Grid")
+                text: i18nc("@title, grid panel", "Arrange")
             }
 
             HoverHandler {
@@ -89,15 +96,19 @@ KSvg.FrameSvgItem {
             }
         }
 
+        Kirigami.Separator {
+            Layout.fillWidth: true
+        }
+
         PlasmaComponents3.TabBar {
             id: tabBar
             Layout.fillWidth: true
 
             PlasmaComponents3.TabButton {
-                text: i18nc("@title:tab desktop shortcuts (Icon widgets)", "Shortcuts")
+                text: i18nc("@title:tab desktop shortcuts (Icon widgets), grid panel", "Shortcuts")
             }
             PlasmaComponents3.TabButton {
-                text: i18nc("@title:tab other desktop widgets", "Plasmoids")
+                text: i18nc("@title:tab other desktop widgets, grid panel", "Plasmoids")
             }
         }
 
@@ -106,16 +117,17 @@ KSvg.FrameSvgItem {
             // As tall as the tab shown, so that a shorter tab leaves no empty space
             Layout.preferredHeight: children[currentIndex]?.implicitHeight ?? 0
 
-            // Shortcuts: their grid and their size. A grid layout, so that
-            // "Resize Icons" sits right under the cell height.
+            // Shortcuts: their grid and their size
             GridLayout {
                 columns: 4
                 columnSpacing: Kirigami.Units.smallSpacing
-                rowSpacing: Kirigami.Units.smallSpacing
+                rowSpacing: Kirigami.Units.largeSpacing
 
                 // Cell size: width × height
                 PlasmaComponents3.Label {
-                    text: i18nc("@label:spinbox", "Cell size:")
+                    Layout.alignment: Qt.AlignRight
+                    Layout.minimumWidth: plasmoidsCellLabel.implicitWidth
+                    text: i18nc("@label:spinbox, grid panel", "Cell size:")
                 }
 
                 PlasmaComponents3.SpinBox {
@@ -148,7 +160,8 @@ KSvg.FrameSvgItem {
 
                 // Icon size of the shortcuts (a shortcut is as wide as its cell)
                 PlasmaComponents3.Label {
-                    text: i18nc("@label:spinbox", "Icon size:")
+                    Layout.alignment: Qt.AlignRight
+                    text: i18nc("@label:spinbox, grid panel", "Icon size:")
                 }
 
                 PlasmaComponents3.SpinBox {
@@ -162,25 +175,20 @@ KSvg.FrameSvgItem {
                     }
                 }
 
-                Item {
-                    // empty, under "×"
-                }
-
-                // Gives every shortcut its size again, centered in its cell
-                PlasmaComponents3.Button {
-                    Layout.fillWidth: true
-                    text: i18nc("@action:button", "Resize Icons")
-                    onClicked: gridPanel.requestChange({})
-                }
             }
 
-            // Plasmoids: their own grid; they keep their size
+            // Plasmoids: their own grid; they keep their size.
+            // Same columns as the Shortcuts tab, so that both look alike.
             ColumnLayout {
                 spacing: Kirigami.Units.smallSpacing
 
                 RowLayout {
+                    spacing: Kirigami.Units.smallSpacing
+
                     PlasmaComponents3.Label {
-                        text: i18nc("@label:spinbox", "Cell size:")
+                        id: plasmoidsCellLabel
+                        Layout.alignment: Qt.AlignRight
+                        text: i18nc("@label:spinbox, grid panel", "Cell size:")
                     }
 
                     PlasmaComponents3.SpinBox {
@@ -228,7 +236,7 @@ KSvg.FrameSvgItem {
                         checked: Plasmoid.configuration.gridPlasmoidCellLinked
                         onToggled: Plasmoid.configuration.gridPlasmoidCellLinked = checked
                         display: PlasmaComponents3.AbstractButton.IconOnly
-                        text: i18nc("@action:button", "Link width and height")
+                        text: i18nc("@action:button, grid panel", "Link width and height")
                         PlasmaComponents3.ToolTip.text: text
                         PlasmaComponents3.ToolTip.visible: hovered
                         PlasmaComponents3.ToolTip.delay: Kirigami.Units.toolTipDelay
@@ -240,7 +248,7 @@ KSvg.FrameSvgItem {
         RowLayout {
             PlasmaComponents3.CheckBox {
                 Layout.fillWidth: true
-                text: i18nc("@option:check", "Snap to screen edges")
+                text: i18nc("@option:check, grid panel", "Snap to screen edges")
                 checked: Plasmoid.configuration.gridSnapToEdges
                 onToggled: Plasmoid.configuration.gridSnapToEdges = checked
             }
@@ -249,16 +257,30 @@ KSvg.FrameSvgItem {
             PlasmaComponents3.Button {
                 visible: gridPanel.plasmoidsTab
                 icon.name: "snap-nodes-cusp"
-                text: i18nc("@action:button snap plasmoids to the grid", "Snap to Grid")
+                text: i18nc("@action:button snap plasmoids to the grid, grid panel", "Snap to Grid")
                 onClicked: gridPanel.snapPlasmoidsRequested()
             }
         }
 
-        PlasmaComponents3.Button {
+        Kirigami.Separator {
+            Layout.fillWidth: true
+        }
+
+        RowLayout {
             Layout.alignment: Qt.AlignRight
-            icon.name: "dialog-ok"
-            text: i18nc("@action:button leave grid mode", "Done")
-            onClicked: Plasmoid.containment.corona.editMode = false
+            spacing: Kirigami.Units.smallSpacing
+
+            PlasmaComponents3.Button {
+                icon.name: "document-save"
+                text: i18nc("@action:button keep the changes and leave grid mode, grid panel", "Save")
+                onClicked: Plasmoid.containment.corona.editMode = false
+            }
+
+            PlasmaComponents3.Button {
+                icon.name: "dialog-cancel"
+                text: i18nc("@action:button undo all changes and leave grid mode, grid panel", "Cancel")
+                onClicked: gridPanel.cancelRequested()
+            }
         }
     }
 }
