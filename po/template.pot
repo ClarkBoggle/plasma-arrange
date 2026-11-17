@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: plasma-arrange\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 16:54+0100\n"
+"POT-Creation-Date: 2026-11-17 19:02+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,57 +17,57 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: package/contents/ui/GridPanel.qml:108
+#: package/contents/ui/GridPanel.qml:109
 msgctxt "@title"
 msgid "Arrange Desktop"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:133
+#: package/contents/ui/GridPanel.qml:134
 msgctxt "@title:tab desktop shortcuts (Icon widgets)"
 msgid "Shortcuts"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:136
+#: package/contents/ui/GridPanel.qml:137
 msgctxt "@title:tab other desktop widgets"
 msgid "Plasmoids"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:155 package/contents/ui/GridPanel.qml:215
+#: package/contents/ui/GridPanel.qml:156 package/contents/ui/GridPanel.qml:216
 msgctxt "@label:spinbox"
 msgid "Cell size:"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:188
+#: package/contents/ui/GridPanel.qml:189
 msgctxt "@label:spinbox"
 msgid "Icon size:"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:251
+#: package/contents/ui/GridPanel.qml:252
 msgctxt "@action:button"
 msgid "Link width and height"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:268
+#: package/contents/ui/GridPanel.qml:269
 msgctxt "@option:check"
 msgid "Snap to screen edges"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:276
+#: package/contents/ui/GridPanel.qml:277
 msgctxt "@info screen edges the widgets snap to"
 msgid "(Right and Bottom)"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:293
+#: package/contents/ui/GridPanel.qml:294
 msgctxt "@action:button snap plasmoids to the grid"
 msgid "Snap to Grid"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:308
+#: package/contents/ui/GridPanel.qml:309
 msgctxt "@action:button keep the changes and leave grid mode"
 msgid "Save"
 msgstr ""
 
-#: package/contents/ui/GridPanel.qml:314
+#: package/contents/ui/GridPanel.qml:315
 msgctxt "@action:button undo all changes and leave grid mode"
 msgid "Cancel"
 msgstr ""
