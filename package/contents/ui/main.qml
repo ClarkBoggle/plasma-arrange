@@ -78,10 +78,10 @@ ContainmentItem {
         return Math.round((cellWidth - width) / 2);
     }
 
-    // Vertical offset of a shortcut of this height (its name takes 1 or 2 lines),
-    // centered on its cell
-    function shortcutOffsetY(height: real, cellHeight: real): real {
-        return Math.round((cellHeight - height) / 2);
+    // Vertical offset of a shortcut, centered on its cell as if its name took 2 lines:
+    // the same for every shortcut, so that all icons of a row are aligned
+    function shortcutOffsetY(iconSize: real, cellHeight: real): real {
+        return Math.round((cellHeight - iconSize - twoLinesName.implicitHeight) / 2);
     }
 
     property Component appletAppearanceComponent
@@ -155,6 +155,7 @@ ContainmentItem {
     function changeGrid(cellWidth: int, cellHeight: int, iconSize: int): void {
         const oldCellWidth = Plasmoid.configuration.gridCellWidth;
         const oldCellHeight = Plasmoid.configuration.gridCellHeight;
+        const oldIconSize = Plasmoid.configuration.gridIconSize;
 
         Plasmoid.configuration.gridCellWidth = cellWidth;
         Plasmoid.configuration.gridCellHeight = cellHeight;
@@ -167,7 +168,7 @@ ContainmentItem {
             const onRightEdge = Math.abs(item.x + item.width - appletsLayout.width) < 1;
             const onBottomEdge = Math.abs(item.y + item.height - appletsLayout.height) < 1;
             const column = Math.round((item.x - shortcutOffset(item.width, oldCellWidth)) / oldCellWidth);
-            const row = Math.round((item.y - shortcutOffsetY(item.height, oldCellHeight)) / oldCellHeight);
+            const row = Math.round((item.y - shortcutOffsetY(oldIconSize, oldCellHeight)) / oldCellHeight);
             const size = shortcutSize(item.applet.plasmoid.title, cellWidth, iconSize);
             const width = size.width;
             const height = size.height;
@@ -183,7 +184,7 @@ ContainmentItem {
             if (onBottomEdge) {
                 item.y = appletsLayout.height - height;
             } else {
-                item.y = Math.max(0, Math.min(row * cellHeight + shortcutOffsetY(height, cellHeight),
+                item.y = Math.max(0, Math.min(row * cellHeight + shortcutOffsetY(iconSize, cellHeight),
                                               appletsLayout.height - height));
             }
         }
@@ -229,6 +230,19 @@ ContainmentItem {
         return Qt.size(width, height);
     }
 
+    // "Resize Icons": every shortcut gets its size again, centered in its cell
+    function resizeIcons(): void {
+        const config = Plasmoid.configuration;
+        changeGrid(config.gridCellWidth, config.gridCellHeight, config.gridIconSize);
+    }
+
+    // Resize Icons once the drop animation is over (positions are read from the shortcuts)
+    Timer {
+        id: resizeIconsTimer
+        interval: Kirigami.Units.longDuration
+        onTriggered: root.resizeIcons()
+    }
+
     // Saves the widgets geometry once the move animations are over
     function saveLayoutLater(): void {
         saveLayoutTimer.restart();
@@ -240,11 +254,17 @@ ContainmentItem {
         onTriggered: root.appletsLayout.save()
     }
 
-    // Hidden label, set like the shortcut name, to measure its height at a given width
+    // Hidden labels, set like the shortcut name, to measure its height at a given width,
+    // and the height of a 2 lines name
     PlasmaExtras.ShadowedLabel {
         id: nameMeasure
         visible: false
         maximumLineCount: 2
+    }
+    PlasmaExtras.ShadowedLabel {
+        id: twoLinesName
+        visible: false
+        text: "X\nX"
     }
 
     function isDrag(fromX, fromY, toX, toY) {
@@ -498,6 +518,10 @@ ContainmentItem {
                         width = geometry.width;
                         height = geometry.height;
                         root.saveLayoutLater();
+                        // After a shortcut drop, all shortcuts get their size again ("Resize Icons")
+                        if (isShortcut) {
+                            resizeIconsTimer.restart();
+                        }
                     }
                     dragged = false;
                     root.movingWidget = false;
@@ -514,7 +538,7 @@ ContainmentItem {
                     const cellWidth = isShortcut ? Plasmoid.configuration.gridCellWidth : Plasmoid.configuration.gridPlasmoidCellWidth;
                     const cellHeight = isShortcut ? Plasmoid.configuration.gridCellHeight : Plasmoid.configuration.gridPlasmoidCellHeight;
                     const offset = isShortcut ? root.shortcutOffset(size.width, cellWidth) : 0;
-                    const offsetY = isShortcut ? root.shortcutOffsetY(size.height, cellHeight) : 0;
+                    const offsetY = isShortcut ? root.shortcutOffsetY(Plasmoid.configuration.gridIconSize, cellHeight) : 0;
 
                     const x = snap(position.x, offset, cellWidth, appletsLayout.width - size.width);
                     const y = snap(position.y, offsetY, cellHeight, appletsLayout.height - size.height);
