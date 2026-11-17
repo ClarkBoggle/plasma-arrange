@@ -7,7 +7,7 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 - **Shortcuts** tab: shortcuts (*Icon* widgets) snap to a grid of cells, all with
   the same icon size, their icons aligned along each row.\
   Each shortcut's height takes into account the number of lines of its name
-  (1 or 2), so that every icon keeps the same size.\
+  (1 or 2), so that every icon keeps the same size and stays aligned.\
   The grid and shortcut sizes limit each other, so that no shortcut overflows
   its cell.
 - **Plasmoids** tab: the other widgets snap to their own grid, when moved or
