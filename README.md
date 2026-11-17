@@ -11,6 +11,20 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
   they were when entering edit mode.
 
+## Your system is not modified
+
+- plasma-arrange is a **copy of Plasma's original desktop package**
+  (`/usr/share/plasma/plasmoids/org.kde.desktopcontainment`), with the grid
+  arrangement added to it.
+- **Everything is installed in your home folder**, in
+  `~/.local/share/plasma/plasmoids/org.kde.desktopcontainment`. Plasma uses a
+  package found there instead of the system one, for your user only.
+- **Nothing is changed in the system**: no file outside your home folder is
+  written, the original package stays untouched, no root rights are needed
+  (never run the scripts with `sudo`).
+- To go back to the original desktop, `./uninstall.sh` removes the copy:
+  Plasma uses its own package again.
+
 ## Requirements
 
 - KDE Plasma 6.8 (made and tested with 6.8.2, on Wayland)
@@ -29,7 +43,7 @@ cd plasma-arrange
 `~/.local/share/plasma/plasmoids/org.kde.desktopcontainment` and reloads the
 desktop. Nothing is changed outside your home folder.
 
-This copy **replaces the system desktop package** (`org.kde.desktopcontainment`,
+This copy takes the place of the system desktop package (`org.kde.desktopcontainment`,
 the *Desktop* layout) for your user only: it is the full Plasma package with the
 grid arrangement added. Folder View desktops are not affected by the grids.
 
