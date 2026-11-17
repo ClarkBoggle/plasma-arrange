@@ -25,6 +25,14 @@ if [ -d "$TARGET" ] && [ ! -L "$TARGET" ] && [ ! -f "$TARGET/$OURS" ]; then
     exit 1
 fi
 
+# Plasma updated since our package was last merged with the system one: update
+# first (update-plasma.sh merges the new system package, then runs this script again)
+version=$(plasmashell --version | awk '{ print $2 }')
+if ! git rev-parse --quiet --verify "refs/tags/plasma-$version" > /dev/null; then
+    echo "Plasma $version is not merged yet: running ./update-plasma.sh first."
+    exec ./update-plasma.sh
+fi
+
 ./build-translations.sh
 
 # New copy next to the old one, then swapped (old copy or old link removed)

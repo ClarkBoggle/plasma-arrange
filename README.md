@@ -91,6 +91,7 @@ updates. After updating Plasma, from the cloned repository:
 It takes the new system package, applies changes to it again (git merge
 from the `upstream` branch, which holds the unmodified Plasma packages) and
 reinstalls. If changes conflict with the new version, it stops.
+`./install.sh` runs it by itself when Plasma's version has changed.
 
 ## Files
 
