@@ -124,6 +124,7 @@ Item {
         // The selected widget of the tab shown
         Handles {
             target: scene.plasmoidsTab ? cpu : kcalc
+            resizable: scene.plasmoidsTab // shortcuts have no resize handles
             toolbarOnLeft: scene.plasmoidsTab
             backgroundButton: scene.plasmoidsTab
         }
@@ -255,16 +256,17 @@ Item {
     }
 
     // Plasma's handles around the selected widget: resize handles at the corners and
-    // middle of the sides, and a toolbar beside it
+    // middle of the sides (if resizable), and a toolbar beside it
     component Handles: Item {
         property Item target
+        property bool resizable
         property bool toolbarOnLeft
         property bool backgroundButton
 
         anchors.fill: parent
 
         Repeater {
-            model: [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]]
+            model: resizable ? [[0, 0], [0.5, 0], [1, 0], [0, 0.5], [1, 0.5], [0, 1], [0.5, 1], [1, 1]] : []
             Rectangle {
                 required property var modelData
                 width: 22
