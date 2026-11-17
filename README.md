@@ -169,8 +169,8 @@ previously computed from the cells, is unchanged.
 
 **2. Locking each widget** (line 324)
 
-The widgets of the other tab are locked: no handles. `GridArrange` blocks their
-clicks too (a click on a shortcut would launch it), and connects itself to each
+The widgets of the other tab are locked: no handles. `GridArrange` takes their
+clicks too (a click on a shortcut would launch it) and shows their tab instead, and connects itself to each
 widget to know when it is selected or moved, and to remove the resize handles of
 shortcuts.
 

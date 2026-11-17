@@ -20,7 +20,8 @@ import "GridDrag.js" as GridDrag
 // - The other widgets (plasmoids) snap to the plasmoid grid and keep their size.
 // - Shortcuts cannot be resized by hand (they have the size of the grid);
 //   plasmoids can, freely ("Snap to Grid" fits them to their grid).
-// - Only the kind of widget of the tab shown in the grid panel can be moved.
+// - Only the kind of widget of the tab shown in the grid panel can be moved;
+//   a click on a widget of the other kind shows its tab.
 // - Widgets moved to another screen are snapped to the grids of that screen.
 // - Only a click selects a widget (shows its handles), not the mouse over it.
 // - Moved widgets show no handles, shortcuts no tooltip.
@@ -28,7 +29,8 @@ import "GridDrag.js" as GridDrag
 //
 // The applets layout cannot do this itself: it rounds positions and sizes to
 // whole cells and ignores screen edges. So it is given 1 px cells (see main.qml)
-// and all the snapping is done here, connected to the applet containers. This item also draws the grid, behind the widgets.
+// and all the snapping is done here, connected to the applet containers.
+// This item also draws the grid, behind the widgets.
 Item {
     id: grid
 
@@ -81,8 +83,8 @@ Item {
 
     // --- Widgets ---------------------------------------------------------
 
-    // The applet containers of the layout (its other children are the placeholder,
-    // the folder view layer and this item)
+    // The applet containers of the layout that have their applet (its other children
+    // are the placeholder, the folder view layer, this item and hoverBlocker)
     function widgets(): var {
         return Array.from(appletsLayout.children).filter(item => item.applet);
     }
@@ -96,6 +98,34 @@ Item {
         return active && isShortcut(item) === plasmoidsTab;
     }
 
+    // Each widget tells when it is selected or moved, and when it gets its handles
+    // (connected once per widget). All the applet containers are watched, even
+    // without their applet yet: a widget coming from another screen gets its
+    // container added to the layout first, and its applet only after (no new
+    // childrenChanged then).
+    property var watchedWidgets: []
+
+    function watchWidgets(): void {
+        watchedWidgets = watchedWidgets.filter(item => item); // (destroyed: null)
+        const containers = Array.from(appletsLayout.children).filter(item => item.applet !== undefined);
+        for (const item of containers) {
+            if (!watchedWidgets.includes(item)) {
+                watchedWidgets.push(item);
+                item.editModeChanged.connect(() => grid.widgetEditModeChanged(item));
+                item.dragActiveChanged.connect(() => grid.widgetMovingChanged(item, item.dragActive));
+                item.configOverlayItemChanged.connect(() => grid.widgetHandlesChanged(item));
+            }
+        }
+    }
+
+    Connections {
+        target: grid.appletsLayout
+        function onChildrenChanged(): void {
+            grid.watchWidgets();
+        }
+    }
+
+    // (also used for the placeholder)
     function setGeometry(item: Item, geometry: rect): void {
         item.x = geometry.x;
         item.y = geometry.y;
@@ -150,7 +180,12 @@ Item {
         if (config.gridSnapToEdges && max - position < Math.abs(position - onGrid)) {
             return max;
         }
-        return Math.max(0, Math.min(onGrid, max));
+        return clamp(onGrid, max);
+    }
+
+    // The value kept between 0 and max
+    function clamp(value: real, max: real): real {
+        return Math.max(0, Math.min(value, max));
     }
 
     // --- Shortcuts -------------------------------------------------------
@@ -214,8 +249,10 @@ Item {
 
             const maxX = appletsLayout.width - size.width;
             const maxY = appletsLayout.height - size.height;
-            const x = onRightEdge ? maxX : Math.max(0, Math.min(column * cellWidth + shortcutOffsetX(size.width, cellWidth), maxX));
-            const y = onBottomEdge ? maxY : Math.max(0, Math.min(row * cellHeight + shortcutOffsetY(iconSize, cellHeight), maxY));
+            const x = onRightEdge ? maxX
+                : clamp(column * cellWidth + shortcutOffsetX(size.width, cellWidth), maxX);
+            const y = onBottomEdge ? maxY
+                : clamp(row * cellHeight + shortcutOffsetY(iconSize, cellHeight), maxY);
             setGeometry(item, Qt.rect(x, y, size.width, size.height));
         }
         saveLater();
@@ -258,8 +295,10 @@ Item {
         const cellHeight = config.gridPlasmoidCellHeight;
         const left = snap(item.x, 0, cellWidth, appletsLayout.width);
         const top = snap(item.y, 0, cellHeight, appletsLayout.height);
-        const right = Math.max(left + cellWidth, snap(item.x + item.width, 0, cellWidth, appletsLayout.width));
-        const bottom = Math.max(top + cellHeight, snap(item.y + item.height, 0, cellHeight, appletsLayout.height));
+        const right = Math.max(left + cellWidth,
+                               snap(item.x + item.width, 0, cellWidth, appletsLayout.width));
+        const bottom = Math.max(top + cellHeight,
+                                snap(item.y + item.height, 0, cellHeight, appletsLayout.height));
         return Qt.rect(left, top, right - left, bottom - top);
     }
 
@@ -270,19 +309,20 @@ Item {
         saveLater();
     }
 
-    // --- Moving a widget (see watchWidgets(), and main.qml for widgetMoved()) ---
+    // --- Moving a widget (main.qml calls widgetMoved()) --------------------
 
     property Item draggedItem: null
     property size sizeBeforeDrag
     property point dragPosition // position while dragged, before any snapping
     property bool dragged: false // it really moved (not only clicked)
 
-    function widgetDragActiveChanged(item: Item): void {
-        if (item.dragActive && active) {
+    // A widget is moved by a press and hold on it (dragActive) or by the move bar
+    // of its handles (see watchMoveBar())
+    function widgetMovingChanged(item: Item, moving: bool): void {
+        if (moving && active) {
             moveStarted(item);
-        } else if (!item.dragActive && item === draggedItem) {
+        } else if (!moving && item === draggedItem) {
             moveEnded(item);
-            draggedItem = null;
         }
     }
 
@@ -325,6 +365,7 @@ Item {
     }
 
     function moveEnded(item: Item): void {
+        draggedItem = null;
         setHandlesShown(item, true);
         // If it leaves for another screen, main.qml unselects it right after
         moveEndedWidget = item;
@@ -343,26 +384,6 @@ Item {
             droppedPlasmoid = item;
             droppedGeometry = geometry;
             dropEndTimer.restart();
-        }
-    }
-
-    // Shortcuts have the size of the shortcut grid: no resize handles
-    function removeResizeHandles(item: Item): void {
-        if (!isShortcut(item)) {
-            return;
-        }
-        for (const child of item.configOverlayItem?.children ?? []) {
-            if (child.resizeCorner !== undefined) {
-                child.visible = false;
-                child.enabled = false;
-            }
-        }
-    }
-
-    // Handles are hidden while the widget moves
-    function setHandlesShown(item: Item, shown: bool): void {
-        if (item.configOverlayItem) {
-            item.configOverlayItem.opacity = shown ? 1 : 0;
         }
     }
 
@@ -405,6 +426,61 @@ Item {
                 grid.saveLater();
             }
             grid.droppedPlasmoid = null;
+        }
+    }
+
+    // --- Handles -----------------------------------------------------------
+    // Shown around the selected widget: resize handles, and a bar with buttons
+    // (rotate, configure, remove) and an area to move the widget.
+
+    // The handles of a widget are created when it is first selected
+    function widgetHandlesChanged(item: Item): void {
+        removeResizeHandles(item);
+        watchMoveBar(item);
+    }
+
+    // The bar next to the handles also moves the widget (a MouseArea dragging it,
+    // calling userDrag but without dragActive): the move starts and ends with it.
+    // pressedChanged comes after Plasma's onReleased, which places the widget.
+    function watchMoveBar(item: Item): void {
+        const bar = findMoveBar(item.configOverlayItem, item);
+        if (!bar) {
+            return;
+        }
+        bar.pressedChanged.connect(() => grid.widgetMovingChanged(item, bar.pressed));
+    }
+
+    // The MouseArea dragging this widget, among the descendants of its handles
+    function findMoveBar(handles: Item, item: Item): Item {
+        for (const child of handles?.children ?? []) {
+            if (child.drag?.target === item) {
+                return child;
+            }
+            const bar = findMoveBar(child, item);
+            if (bar) {
+                return bar;
+            }
+        }
+        return null;
+    }
+
+    // Shortcuts have the size of the shortcut grid: no resize handles
+    function removeResizeHandles(item: Item): void {
+        if (!isShortcut(item)) {
+            return;
+        }
+        for (const child of item.configOverlayItem?.children ?? []) {
+            if (child.resizeCorner !== undefined) {
+                child.visible = false;
+                child.enabled = false;
+            }
+        }
+    }
+
+    // Handles are hidden while the widget moves
+    function setHandlesShown(item: Item, shown: bool): void {
+        if (item.configOverlayItem) {
+            item.configOverlayItem.opacity = shown ? 1 : 0;
         }
     }
 
@@ -480,8 +556,9 @@ Item {
 
     // A widget added in grid mode is placed by the layout where it was dropped,
     // off the grid. From another screen, it is put where the placeholder showed
-    // (geometry), with the rotation it had (its new container has none). Otherwise (created by a drop, for instance), a shortcut gets the
-    // shortcut size on the nearest cell, a plasmoid the nearest grid lines.
+    // (geometry), with the rotation it had (its new container has none).
+    // Otherwise (created by a drop, for instance), a shortcut gets the shortcut size
+    // on the nearest cell, a plasmoid the nearest grid lines.
     function placeAddedWidget(appletId: int, geometry: var, rotation: real): void {
         const item = widgets().find(item => item.applet.plasmoid.id === appletId);
         if (!item) {
@@ -498,7 +575,8 @@ Item {
         } else if (isShortcut(item)) {
             // Centered where it was dropped
             const size = shortcutSize(item.applet.plasmoid.title, config.gridCellWidth, config.gridIconSize);
-            const position = Qt.point(item.x + (item.width - size.width) / 2, item.y + (item.height - size.height) / 2);
+            const position = Qt.point(item.x + (item.width - size.width) / 2,
+                                      item.y + (item.height - size.height) / 2);
             setGeometry(item, dropGeometry(item, position));
         } else {
             item.x = snap(item.x, 0, config.gridPlasmoidCellWidth, appletsLayout.width - item.width);
@@ -575,35 +653,10 @@ Item {
         });
     }
 
-    // Every widget tells when it is selected or moved, and gets its handles (connected once).
-    // All the applet containers are watched, even without their applet yet: a widget
-    // coming from another screen gets its container added to the layout first, and
-    // its applet only after (no new childrenChanged then).
-    property var watchedWidgets: []
-
-    function watchWidgets(): void {
-        watchedWidgets = watchedWidgets.filter(item => item); // (destroyed: null)
-        const containers = Array.from(appletsLayout.children).filter(item => item.applet !== undefined);
-        for (const item of containers) {
-            if (!watchedWidgets.includes(item)) {
-                watchedWidgets.push(item);
-                item.editModeChanged.connect(() => grid.widgetEditModeChanged(item));
-                item.dragActiveChanged.connect(() => grid.widgetDragActiveChanged(item));
-                item.configOverlayItemChanged.connect(() => grid.removeResizeHandles(item));
-            }
-        }
-    }
-
-    Connections {
-        target: grid.appletsLayout
-        function onChildrenChanged(): void {
-            grid.watchWidgets();
-        }
-    }
-
     // Above the widgets: takes the hover events, and lets the clicks through,
-    // unselecting on a click on the desktop itself. Clicks on a locked widget are
-    // taken too (a click on a shortcut would launch it).
+    // unselecting on a click on the desktop itself. A click on a locked widget is
+    // taken (a click on a shortcut would launch it): it shows the tab of this
+    // widget and selects it.
     MouseArea {
         id: hoverBlocker
         parent: grid.appletsLayout
@@ -616,12 +669,20 @@ Item {
             if (!grid.isOnWidget(mouse.x, mouse.y)) {
                 grid.select(null);
             }
-            mouse.accepted = grid.isOnLockedWidget(mouse.x, mouse.y);
+            const locked = grid.lockedWidgetAt(mouse.x, mouse.y);
+            if (locked) {
+                grid.panel.showTab(!grid.isShortcut(locked));
+                grid.select(locked);
+            }
+            mouse.accepted = locked !== null;
         }
     }
 
-    function isOnLockedWidget(x: real, y: real): bool {
-        return widgets().some(item => isLocked(item) && item.contains(appletsLayout.mapToItem(item, x, y)));
+    // The locked widget at this point of the layout (the topmost one), if no unlocked
+    // one is there
+    function lockedWidgetAt(x: real, y: real): Item {
+        const items = widgets().filter(item => item.contains(appletsLayout.mapToItem(item, x, y)));
+        return items.some(item => !isLocked(item)) ? null : (items[items.length - 1] ?? null);
     }
 
     // The selected widget, above hoverBlocker, would get the clicks once locked
@@ -639,7 +700,7 @@ Item {
                                           "gridPlasmoidCellWidth", "gridPlasmoidCellHeight"]
 
     onActiveChanged: {
-        selectedWidget = null;
+        select(null);
         if (!active) {
             if (GridDrag.cancelling) {
                 restoreSavedLayout();

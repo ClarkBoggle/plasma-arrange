@@ -68,6 +68,7 @@ KSvg.FrameSvgItem {
         const config = Plasmoid.configuration;
         let width = changes.width ?? config.gridPlasmoidCellWidth;
         let height = changes.height ?? config.gridPlasmoidCellHeight;
+        // (8: the smallest cell, as in the spin boxes)
         if (config.gridPlasmoidCellLinked) {
             if (changes.width !== undefined) {
                 height = Math.max(8, Math.round(config.gridPlasmoidCellHeight * width / config.gridPlasmoidCellWidth));
