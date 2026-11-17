@@ -80,8 +80,8 @@ Run `./install.sh` again after any change to `package/`.
 Removes the installed copy and reloads the desktop: Plasma uses its own package
 again. Widget positions and grid settings stay in the Plasma configuration.
 
-Both scripts leave alone any other copy of the desktop package found in
-`~/.local/share/plasma/plasmoids/` (they recognize theirs by
+`install.sh` and `uninstall.sh` leave alone any other copy of the desktop
+package found in `~/.local/share/plasma/plasmoids/` (they recognize theirs by
 `contents/ui/GridArrange.qml`).
 
 ## After a Plasma update
