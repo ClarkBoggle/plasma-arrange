@@ -18,6 +18,8 @@ import "GridDrag.js" as GridDrag
 // - Shortcuts (Icon widgets) snap to the shortcut grid: as wide as a cell, with
 //   a fixed icon size, centered in their cell.
 // - The other widgets (plasmoids) snap to the plasmoid grid and keep their size.
+// - Shortcuts cannot be resized by hand (they have the size of the grid);
+//   plasmoids can, freely ("Snap to Grid" fits them to their grid).
 // - Only the kind of widget of the tab shown in the grid panel can be moved.
 // - Widgets moved to another screen are snapped to the grids of that screen.
 // - Only a click selects a widget (shows its handles), not the mouse over it.
@@ -26,8 +28,7 @@ import "GridDrag.js" as GridDrag
 //
 // The applets layout cannot do this itself: it rounds positions and sizes to
 // whole cells and ignores screen edges. So it is given 1 px cells (see main.qml)
-// and all the snapping is done here, through the hooks called by the applet
-// containers. This item also draws the grid, behind the widgets.
+// and all the snapping is done here, connected to the applet containers. This item also draws the grid, behind the widgets.
 Item {
     id: grid
 
@@ -45,6 +46,30 @@ Item {
     readonly property bool movingWidget: draggedItem !== null || incomingDrag
 
     readonly property var config: Plasmoid.configuration
+
+    // The panel asks, this item does
+    Connections {
+        target: grid.panel
+        function onShortcutGridChangeRequested(cellWidth: int, cellHeight: int, iconSize: int): void {
+            grid.setShortcutGrid(cellWidth, cellHeight, iconSize);
+        }
+        function onSnapPlasmoidsRequested(): void {
+            grid.snapAllPlasmoids();
+        }
+        function onSaveRequested(): void {
+            Plasmoid.containment.corona.editMode = false;
+        }
+        function onCancelRequested(): void {
+            grid.restoreSavedLayout();
+            Plasmoid.containment.corona.editMode = false;
+        }
+    }
+
+    Component.onCompleted: {
+        panel.tallestShortcutHeight = tallestShortcutHeight;
+        panel.largestIconSize = largestIconSize;
+        watchWidgets();
+    }
 
     // Grid of the tab shown
     GridLines {
@@ -245,7 +270,7 @@ Item {
         saveLater();
     }
 
-    // --- Moving a widget (hooks called by the applet containers) ---------
+    // --- Moving a widget (see watchWidgets(), and main.qml for widgetMoved()) ---
 
     property Item draggedItem: null
     property size sizeBeforeDrag
@@ -318,6 +343,19 @@ Item {
             droppedPlasmoid = item;
             droppedGeometry = geometry;
             dropEndTimer.restart();
+        }
+    }
+
+    // Shortcuts have the size of the shortcut grid: no resize handles
+    function removeResizeHandles(item: Item): void {
+        if (!isShortcut(item)) {
+            return;
+        }
+        for (const child of item.configOverlayItem?.children ?? []) {
+            if (child.resizeCorner !== undefined) {
+                child.visible = false;
+                child.enabled = false;
+            }
         }
     }
 
@@ -502,6 +540,7 @@ Item {
         selectedWidget = item;
         if (previous && previous !== item) {
             previous.editMode = false;
+            previous.z = 0; // back below hoverBlocker
         }
         if (item) {
             item.editMode = true;
@@ -536,20 +575,24 @@ Item {
         });
     }
 
-    // Every widget calls widgetEditModeChanged() (connected once)
+    // Every widget tells when it is selected or moved, and gets its handles (connected once).
+    // All the applet containers are watched, even without their applet yet: a widget
+    // coming from another screen gets its container added to the layout first, and
+    // its applet only after (no new childrenChanged then).
     property var watchedWidgets: []
 
     function watchWidgets(): void {
-        watchedWidgets = watchedWidgets.filter(item => item && widgets().includes(item));
-        for (const item of widgets()) {
+        watchedWidgets = watchedWidgets.filter(item => item); // (destroyed: null)
+        const containers = Array.from(appletsLayout.children).filter(item => item.applet !== undefined);
+        for (const item of containers) {
             if (!watchedWidgets.includes(item)) {
                 watchedWidgets.push(item);
                 item.editModeChanged.connect(() => grid.widgetEditModeChanged(item));
+                item.dragActiveChanged.connect(() => grid.widgetDragActiveChanged(item));
+                item.configOverlayItemChanged.connect(() => grid.removeResizeHandles(item));
             }
         }
     }
-
-    Component.onCompleted: watchWidgets()
 
     Connections {
         target: grid.appletsLayout
@@ -559,7 +602,8 @@ Item {
     }
 
     // Above the widgets: takes the hover events, and lets the clicks through,
-    // unselecting on a click on the desktop itself
+    // unselecting on a click on the desktop itself. Clicks on a locked widget are
+    // taken too (a click on a shortcut would launch it).
     MouseArea {
         id: hoverBlocker
         parent: grid.appletsLayout
@@ -567,53 +611,21 @@ Item {
         z: 999
         visible: grid.active
         hoverEnabled: true
+        acceptedButtons: Qt.AllButtons
         onPressed: mouse => {
             if (!grid.isOnWidget(mouse.x, mouse.y)) {
                 grid.select(null);
             }
-            mouse.accepted = false;
+            mouse.accepted = grid.isOnLockedWidget(mouse.x, mouse.y);
         }
     }
 
-    // --- Resizing a plasmoid with its handles ------------------------------
-    // The placeholder shows the snapped size during the resize, and the snapped size
-    // is applied once, when the handle is released: snapping at every mouse move
-    // would resize the plasmoid twice per move, which is slow and jerky.
-
-    property Item resizedItem: null
-
-    function widgetResized(item: Item): void {
-        if (!active || isShortcut(item) || item.dragActive || !item.editMode || !resizeHandlePressed(item)) {
-            return;
-        }
-        resizedItem = item;
-        showPlaceHolder(snappedPlasmoidGeometry(item), false);
-        resizeEndTimer.start();
+    function isOnLockedWidget(x: real, y: real): bool {
+        return widgets().some(item => isLocked(item) && item.contains(appletsLayout.mapToItem(item, x, y)));
     }
 
-    function resizeHandlePressed(item: Item): bool {
-        return (item.configOverlayItem?.children ?? []).some(child => child.resizeCorner !== undefined && child.pressed);
-    }
-
-    // Waits for the handle to be released
-    Timer {
-        id: resizeEndTimer
-        interval: 50
-        repeat: true
-        onTriggered: {
-            const item = grid.resizedItem;
-            if (item && grid.resizeHandlePressed(item)) {
-                return;
-            }
-            stop();
-            if (item) {
-                grid.setGeometry(item, grid.snappedPlasmoidGeometry(item));
-                grid.appletsLayout.hidePlaceHolder();
-                grid.saveLater();
-            }
-            grid.resizedItem = null;
-        }
-    }
+    // The selected widget, above hoverBlocker, would get the clicks once locked
+    onPlasmoidsTabChanged: select(null)
 
     // --- Cancel ----------------------------------------------------------
     // Cancel puts back the desktops of all screens as when grid mode started: the

@@ -9,9 +9,10 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
   Each shortcut's height takes into account the number of lines of its name
   (1 or 2), so that its icon keeps exactly the chosen size.\
   The grid and shortcut sizes limit each other, so that no shortcut overflows
-  its cell.
-- **Plasmoids** tab: the other widgets snap to their own grid, when moved or
-  resized; *Snap to Grid* aligns and resizes all of them at once.
+  its cell. They cannot be resized by hand.
+- **Plasmoids** tab: the other widgets snap to their own grid when moved, and
+  keep the size given by hand; *Snap to Grid* aligns and resizes all of them at
+  once.
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
   they were when entering edit mode, on all screens (widgets moved to another
   screen go back to theirs). Deleted widgets are not recreated. Both leave edit
@@ -108,7 +109,7 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 
 | File | Role |
 |---|---|
-| `package/contents/ui/GridArrange.qml` | Grid logic: snapping, shortcut sizes, moves between screens, selection by click, saving and restoring the layout; draws the grid |
+| `package/contents/ui/GridArrange.qml` | Grid logic: snapping, shortcut sizes, moves between screens, selection by click, locking of the other tab's widgets, saving and restoring the layout; draws the grid |
 | `package/contents/ui/GridPanel.qml` | The *Arrange Desktop* panel |
 | `package/contents/ui/GridLines.qml` | Drawing of a grid |
 | `package/contents/ui/GridDrag.js` | State shared by the desktops of all screens: widget moved to another screen, where moved widgets are, Cancel |
@@ -121,7 +122,7 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 
 | File | Change |
 |---|---|
-| `package/contents/ui/main.qml` | About 60 lines, marked *Grid arrangement*: see [Changes to main.qml](#changes-to-mainqml) |
+| `package/contents/ui/main.qml` | About 30 lines, marked *Grid arrangement*: see [Changes to main.qml](#changes-to-mainqml) |
 | `package/contents/config/main.xml` | The `grid*` settings |
 
 All the other files of `package/` are Plasma's, unchanged.
@@ -132,11 +133,12 @@ The pictures of this README, and the scenes they are rendered from, are on the
 ## Changes to main.qml
 
 `main.qml` is the main file of Plasma's desktop. It is kept as close to the
-original as possible: it only connects the desktop to `GridArrange` and to the
-panel, all the logic is in `GridArrange.qml`. These lines must be carried over
+original as possible: it only sets the layout cells, locks widgets and creates
+`GridArrange` and the panel; all the logic is in `GridArrange.qml`, which also
+connects to the widgets and to the panel itself. These lines must be carried over
 when a Plasma update changes `main.qml` (`update-plasma.sh` does it).
 
-In total: 57 lines added (12 of them comments), 5 lines of Plasma changed.
+In total: 25 lines added (6 of them comments), 5 lines of Plasma changed.
 Line numbers are those of the modified `main.qml`.
 
 **1. Layout cells** (line 309)
@@ -151,12 +153,8 @@ previously computed from the cells, is unchanged.
 
 ```diff
 -            minimumItemWidth: Kirigami.Units.gridUnit * 3
-+            // Grid arrangement (see GridArrange.qml): the layout rounds the position and
-+            // size of every widget to whole cells each time it places them, so its cells
-+            // are 1 px and the snapping to the grids is done by GridArrange. While a widget
-+            // is moved, its cells are huge instead: it would otherwise recompute its own
-+            // placeholder at every pixel, over the whole widget area (slow and jerky).
-+            // Its minimum item size must not enlarge small shortcuts either.
++            // Grid arrangement (see GridArrange.qml): 1 px cells, huge while a widget is
++            // moved (smooth placeholder), small shortcuts not enlarged
 +            minimumItemWidth: Kirigami.Units.iconSizes.small
              minimumItemHeight: minimumItemWidth
  
@@ -169,11 +167,12 @@ previously computed from the cells, is unchanged.
 +            defaultItemHeight: Kirigami.Units.iconSizes.small * 6
 ```
 
-**2. Locking and hooks on each widget** (line 328)
+**2. Locking each widget** (line 324)
 
-The widgets of the other tab are locked: no handles, and a `MouseArea` on top
-blocks their clicks (a click on a shortcut would launch it). `GridArrange` is
-told when a drag starts or ends, and when a widget is resized.
+The widgets of the other tab are locked: no handles. `GridArrange` blocks their
+clicks too (a click on a shortcut would launch it), and connects itself to each
+widget to know when it is selected or moved, and to remove the resize handles of
+shortcuts.
 
 ```diff
 -                editModeCondition: Plasmoid.immutable
@@ -181,38 +180,28 @@ told when a drag starts or ends, and when a widget is resized.
 +                editModeCondition: (Plasmoid.immutable || gridArrange.isLocked(appletContainer))
                      ? ContainmentLayoutManager.ItemContainer.Locked
                      : ContainmentLayoutManager.ItemContainer.AfterPressAndHold
- 
-+                // Grid arrangement: snapping when moved or resized
-+                onDragActiveChanged: gridArrange.widgetDragActiveChanged(appletContainer)
-+                onWidthChanged: gridArrange.widgetResized(appletContainer)
-+                onHeightChanged: gridArrange.widgetResized(appletContainer)
-+
-+                // Grid arrangement: a locked widget does not react to clicks either
-+                // (a click on a shortcut would launch it)
-+                MouseArea {
-+                    anchors.fill: parent
-+                    z: 1000
-+                    enabled: gridArrange.isLocked(appletContainer)
-+                    acceptedButtons: Qt.AllButtons
-+                }
 ```
 
-**3. While dragging** (line 383)
+**3. While dragging** (line 364)
 
 The position is passed on, so that the green placeholder shows the snapped place,
 and the point where the mouse holds the widget, for a move to another screen.
+It must come before Plasma's code, which hides the placeholder when the widget
+leaves for another screen.
 
 ```diff
                  onUserDrag: (newPosition, dragCenter) => {
++                    // Grid arrangement (before leaving for another screen below)
 +                    gridArrange.widgetMoved(appletContainer, newPosition, dragCenter);
 +
                      const pos = mapToItem(root.parent, dragCenter.x, dragCenter.y);
 ```
 
-**4. The `GridArrange` instance** (line 410, after `placeHolder`)
+**4. The `GridArrange` instance** (line 393, after `placeHolder`)
 
 Below the widgets; active only in edit mode, on a *Desktop* layout (not
-Folder View). It gets the panel, to know and change its tab.
+Folder View). It gets the panel: it follows and changes its tab, and handles its
+settings and buttons.
 
 ```diff
 +            GridArrange {
@@ -225,12 +214,9 @@ Folder View). It gets the panel, to know and change its tab.
 +            }
 ```
 
-**5. The `GridPanel` instance** (line 487, before `Component.onCompleted`)
+**5. The `GridPanel` instance** (line 470, before `Component.onCompleted`)
 
-The *Arrange Desktop* panel, at the top center. It passes its settings and
-buttons on to `GridArrange`: *Save* leaves edit mode, *Cancel* puts the layout
-back as it was (`restoreSavedLayout()`, then the desktops of the other screens
-when edit mode ends), then leaves.
+The *Arrange Desktop* panel, at the top center, shown in edit mode.
 
 ```diff
 +        // Grid arrangement settings, shown in edit mode
@@ -241,16 +227,6 @@ when edit mode ends), then leaves.
 +            // Top center by default; can then be moved by its title
 +            x: Math.round((parent.width - width) / 2)
 +            y: Kirigami.Units.gridUnit * 2
-+            tallestShortcutHeight: gridArrange.tallestShortcutHeight
-+            largestIconSize: gridArrange.largestIconSize
-+            onShortcutGridChangeRequested: (cellWidth, cellHeight, iconSize) =>
-+                gridArrange.setShortcutGrid(cellWidth, cellHeight, iconSize)
-+            onSnapPlasmoidsRequested: gridArrange.snapAllPlasmoids()
-+            onSaveRequested: Plasmoid.containment.corona.editMode = false
-+            onCancelRequested: {
-+                gridArrange.restoreSavedLayout();
-+                Plasmoid.containment.corona.editMode = false;
-+            }
 +        }
 ```
 

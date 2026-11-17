@@ -306,12 +306,8 @@ ContainmentItem {
             // Sets the containment in edit mode when we go in edit mode as well
             onEditModeChanged: Plasmoid.containment.corona.editMode = editMode;
 
-            // Grid arrangement (see GridArrange.qml): the layout rounds the position and
-            // size of every widget to whole cells each time it places them, so its cells
-            // are 1 px and the snapping to the grids is done by GridArrange. While a widget
-            // is moved, its cells are huge instead: it would otherwise recompute its own
-            // placeholder at every pixel, over the whole widget area (slow and jerky).
-            // Its minimum item size must not enlarge small shortcuts either.
+            // Grid arrangement (see GridArrange.qml): 1 px cells, huge while a widget is
+            // moved (smooth placeholder), small shortcuts not enlarged
             minimumItemWidth: Kirigami.Units.iconSizes.small
             minimumItemHeight: minimumItemWidth
 
@@ -329,20 +325,6 @@ ContainmentItem {
                 editModeCondition: (Plasmoid.immutable || gridArrange.isLocked(appletContainer))
                     ? ContainmentLayoutManager.ItemContainer.Locked
                     : ContainmentLayoutManager.ItemContainer.AfterPressAndHold
-
-                // Grid arrangement: snapping when moved or resized
-                onDragActiveChanged: gridArrange.widgetDragActiveChanged(appletContainer)
-                onWidthChanged: gridArrange.widgetResized(appletContainer)
-                onHeightChanged: gridArrange.widgetResized(appletContainer)
-
-                // Grid arrangement: a locked widget does not react to clicks either
-                // (a click on a shortcut would launch it)
-                MouseArea {
-                    anchors.fill: parent
-                    z: 1000
-                    enabled: gridArrange.isLocked(appletContainer)
-                    acceptedButtons: Qt.AllButtons
-                }
 
                 configOverlaySource: "ConfigOverlay.qml"
 
@@ -380,6 +362,7 @@ ContainmentItem {
                 }
 
                 onUserDrag: (newPosition, dragCenter) => {
+                    // Grid arrangement (before leaving for another screen below)
                     gridArrange.widgetMoved(appletContainer, newPosition, dragCenter);
 
                     const pos = mapToItem(root.parent, dragCenter.x, dragCenter.y);
@@ -492,16 +475,6 @@ ContainmentItem {
             // Top center by default; can then be moved by its title
             x: Math.round((parent.width - width) / 2)
             y: Kirigami.Units.gridUnit * 2
-            tallestShortcutHeight: gridArrange.tallestShortcutHeight
-            largestIconSize: gridArrange.largestIconSize
-            onShortcutGridChangeRequested: (cellWidth, cellHeight, iconSize) =>
-                gridArrange.setShortcutGrid(cellWidth, cellHeight, iconSize)
-            onSnapPlasmoidsRequested: gridArrange.snapAllPlasmoids()
-            onSaveRequested: Plasmoid.containment.corona.editMode = false
-            onCancelRequested: {
-                gridArrange.restoreSavedLayout();
-                Plasmoid.containment.corona.editMode = false;
-            }
         }
 
         Component.onCompleted: {
