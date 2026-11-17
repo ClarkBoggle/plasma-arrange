@@ -88,7 +88,7 @@ updates. After updating Plasma, from the cloned repository:
 ./update-plasma.sh
 ```
 
-It takes the new system package, applies our changes to it again (git merge
+It takes the new system package, applies changes to it again (git merge
 from the `upstream` branch, which holds the unmodified Plasma packages) and
 reinstalls. If our changes conflict with the new version, it stops: resolve the
 conflicts, `git commit`, then `./install.sh`.
