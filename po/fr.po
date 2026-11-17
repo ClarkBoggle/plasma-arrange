@@ -18,8 +18,8 @@ msgstr ""
 
 #: package/contents/ui/GridPanel.qml:104
 msgctxt "@title"
-msgid "Arrange"
-msgstr "Agencer"
+msgid "Arrange Desktop"
+msgstr "Agencer le bureau"
 
 #: package/contents/ui/GridPanel.qml:129
 msgctxt "@title:tab desktop shortcuts (Icon widgets)"

@@ -101,7 +101,7 @@ KSvg.FrameSvgItem {
             Kirigami.Heading {
                 Layout.fillWidth: true
                 level: 4
-                text: i18nc("@title", "Arrange")
+                text: i18nc("@title", "Arrange Desktop")
             }
 
             HoverHandler {
