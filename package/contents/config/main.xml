@@ -17,23 +17,23 @@
 
     <entry name="gridCellWidth" type="Int">
       <label>Width of a grid cell, in pixels.</label>
-      <default>112</default>
+      <default>72</default>
     </entry>
     <entry name="gridCellHeight" type="Int">
       <label>Height of a grid cell, in pixels.</label>
-      <default>112</default>
+      <default>80</default>
     </entry>
     <entry name="gridIconSize" type="Int">
       <label>Icon size of the shortcuts on the grid, in pixels.</label>
-      <default>64</default>
+      <default>48</default>
     </entry>
     <entry name="gridPlasmoidCellWidth" type="Int">
       <label>Width of a cell of the plasmoid grid, in pixels.</label>
-      <default>64</default>
+      <default>16</default>
     </entry>
     <entry name="gridPlasmoidCellHeight" type="Int">
       <label>Height of a cell of the plasmoid grid, in pixels.</label>
-      <default>64</default>
+      <default>16</default>
     </entry>
     <entry name="gridPlasmoidCellLinked" type="Bool">
       <label>Whether the width and height of a plasmoid grid cell change together, keeping their proportions.</label>
