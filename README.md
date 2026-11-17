@@ -7,7 +7,7 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 - **Shortcuts** tab: shortcuts (*Icon* widgets) snap to a grid of cells, all with
   the same icon size, their icons aligned.\
   Each shortcut's height takes into account the number of lines of its name
-  (1 or 2), so that every icon keeps the same size and stays aligned.\
+  (1 or 2), so that its icon keeps exactly the chosen size.\
   The grid and shortcut sizes limit each other, so that no shortcut overflows
   its cell.
 - **Plasmoids** tab: the other widgets snap to their own grid, when moved or
@@ -20,18 +20,18 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 Default grids: shortcut cells of 96×92 px with 56 px icons, plasmoid cells of
 16×16 px.
 
-![The Arrange Desktop panel: Shortcuts tab (left) and Plasmoids tab (right)](docs/panel.png)
+![The Arrange Desktop panel: Shortcuts tab (left) and Plasmoids tab (right)](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/panel.png)
 
 A desktop in edit mode, **Shortcuts** tab: the shortcut grid, shortcuts of the
-same size with their icons aligned along each row, the trash snapped to the
-bottom-right corner of the screen.
+same size with their icons aligned, the trash snapped to the bottom-right
+corner of the screen.
 
-[![Desktop in edit mode, Shortcuts tab](docs/desktop-shortcuts.jpg)](docs/desktop-shortcuts.jpg?raw=true)
+[![Desktop in edit mode, Shortcuts tab](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-shortcuts.jpg)](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-shortcuts.jpg)
 
 The same desktop, **Plasmoids** tab: the plasmoid grid (16×16 cells), the
 widgets snapped to it.
 
-[![Desktop in edit mode, Plasmoids tab](docs/desktop-plasmoids.jpg)](docs/desktop-plasmoids.jpg?raw=true)
+[![Desktop in edit mode, Plasmoids tab](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-plasmoids.jpg)](https://raw.githubusercontent.com/ClarkBoggle/plasma-arrange/assets/desktop-plasmoids.jpg)
 
 ## Your system is not modified
 
@@ -90,13 +90,14 @@ Since the package is a modified copy of Plasma's, it must follow Plasma's
 updates. After updating Plasma, from the cloned repository:
 
 ```sh
-./update-plasma.sh
+./install.sh
 ```
 
-It takes the new system package, applies changes to it again (git merge
-from the `upstream` branch, which holds the unmodified Plasma packages) and
-reinstalls. If changes conflict with the new version, it stops.
-`./install.sh` runs it by itself when Plasma's version has changed.
+Seeing a new Plasma version, it runs `./update-plasma.sh` first (which can also
+be run directly): it takes the new system package, applies our changes to it
+again (git merge from the `upstream` branch, which holds the unmodified Plasma
+packages) and reinstalls. If our changes conflict with the new version, it
+stops. The repository must have no uncommitted changes.
 
 ## Files
 
@@ -115,7 +116,6 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 | `install.sh`, `uninstall.sh` | Installation, uninstallation |
 | `build-translations.sh` | Builds the translations (called by `install.sh`) |
 | `update-plasma.sh` | Update after a Plasma update |
-| `docs/scenes/` | Scenes of the README pictures, rendered by `docs/scenes/render.sh` |
 
 **Modified**
 
@@ -125,6 +125,9 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 | `package/contents/config/main.xml` | The `grid*` settings |
 
 All the other files of `package/` are Plasma's, unchanged.
+
+The pictures of this README, and the scenes they are rendered from, are on the
+`assets` branch.
 
 ## Changes to main.qml
 
@@ -225,7 +228,8 @@ Folder View). It gets the panel, to know and change its tab.
 
 The *Arrange Desktop* panel, at the top center. It passes its settings and
 buttons on to `GridArrange`: *Save* leaves edit mode, *Cancel* puts the layout
-back as it was (`restoreSavedLayout()`), then leaves.
+back as it was (`restoreSavedLayout()`, then the desktops of the other screens
+when edit mode ends), then leaves.
 
 ```diff
 +        // Grid arrangement settings, shown in edit mode
