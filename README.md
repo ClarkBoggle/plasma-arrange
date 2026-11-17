@@ -5,7 +5,7 @@ Arrange the widgets of the KDE Plasma desktop on grids.
 In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 
 - **Shortcuts** tab: shortcuts (*Icon* widgets) snap to a grid of cells, all with
-  the same icon size, their icons aligned along each row.\
+  the same icon size, their icons aligned.\
   Each shortcut's height takes into account the number of lines of its name
   (1 or 2), so that every icon keeps the same size and stays aligned.\
   The grid and shortcut sizes limit each other, so that no shortcut overflows
