@@ -20,18 +20,32 @@ KSvg.FrameSvgItem {
     width: content.implicitWidth + margins.left + margins.right
     height: content.implicitHeight + margins.top + margins.bottom
 
-    // Icon size of the shortcuts placed on this grid
-    property int shortcutIconSize
-    // Room taken by a 2 lines shortcut name
-    property int shortcutLabelHeight
+    // Whether the Plasmoids tab is shown: the desktop then shows the plasmoid grid
+    readonly property bool plasmoidsTab: tabBar.currentIndex === 1
 
-    // All shortcut icons have the same size only if the cell is tall enough
-    readonly property bool equalIcons: Plasmoid.configuration.gridCellWidth
-        <= Plasmoid.configuration.gridCellHeight - shortcutLabelHeight
+    // function (): size of the largest shortcut, the smallest possible cell size
+    property var largestShortcutSize
+    // function (cellWidth, cellHeight): largest icon size keeping shortcuts inside their cell
+    property var largestIconSize
 
-    signal resizeShortcutsRequested()
-    // New icon size chosen with the slider: the grid and the shortcuts follow
-    signal shortcutIconSizeRequested(int size)
+    signal snapPlasmoidsRequested()
+
+    // New cell size or icon size chosen in the panel: the grid and the shortcuts follow
+    signal gridChangeRequested(int cellWidth, int cellHeight, int iconSize)
+
+    // Asks for a change of one value, the others staying as they are.
+    // A shortcut, as wide as its cell, is never narrower than its icon, and an icon
+    // cannot be so big that a shortcut overflows its cell.
+    function requestChange(changes: var): void {
+        const config = Plasmoid.configuration;
+        const cellHeight = changes.cellHeight ?? config.gridCellHeight;
+        let iconSize = changes.iconSize ?? config.gridIconSize;
+        const cellWidth = Math.max(changes.cellWidth ?? config.gridCellWidth, iconSize);
+        if (changes.iconSize !== undefined) {
+            iconSize = Math.min(iconSize, largestIconSize(cellWidth, cellHeight));
+        }
+        gridChangeRequested(cellWidth, cellHeight, iconSize);
+    }
 
     ColumnLayout {
         id: content
@@ -75,73 +89,169 @@ KSvg.FrameSvgItem {
             }
         }
 
-        // Cell size: width × height
-        RowLayout {
-            PlasmaComponents3.Label {
-                text: i18nc("@label:spinbox", "Cell size:")
-            }
+        PlasmaComponents3.TabBar {
+            id: tabBar
+            Layout.fillWidth: true
 
-            PlasmaComponents3.SpinBox {
-                from: 16
-                to: 512
-                stepSize: 8
-                value: Plasmoid.configuration.gridCellWidth
-                // The width is the shortcut icon size: same as the slider
-                onValueModified: gridPanel.shortcutIconSizeRequested(value)
+            PlasmaComponents3.TabButton {
+                text: i18nc("@title:tab desktop shortcuts (Icon widgets)", "Shortcuts")
             }
-
-            PlasmaComponents3.Label {
-                text: "×"
-            }
-
-            PlasmaComponents3.SpinBox {
-                from: 16
-                to: 512
-                stepSize: 8
-                value: Plasmoid.configuration.gridCellHeight
-                onValueModified: Plasmoid.configuration.gridCellHeight = value
+            PlasmaComponents3.TabButton {
+                text: i18nc("@title:tab other desktop widgets", "Plasmoids")
             }
         }
 
-        // Icon size: cell = icon size × (icon size + 2 lines for the name)
-        RowLayout {
-            PlasmaComponents3.Label {
-                text: i18nc("@label:slider", "Icon size:")
+        StackLayout {
+            currentIndex: tabBar.currentIndex
+            // As tall as the tab shown, so that a shorter tab leaves no empty space
+            Layout.preferredHeight: children[currentIndex]?.implicitHeight ?? 0
+
+            // Shortcuts: their grid and their size. A grid layout, so that
+            // "Resize Icons" sits right under the cell height.
+            GridLayout {
+                columns: 4
+                columnSpacing: Kirigami.Units.smallSpacing
+                rowSpacing: Kirigami.Units.smallSpacing
+
+                // Cell size: width × height
+                PlasmaComponents3.Label {
+                    text: i18nc("@label:spinbox", "Cell size:")
+                }
+
+                PlasmaComponents3.SpinBox {
+                    from: 16
+                    to: 1024
+                    stepSize: 8
+                    value: Plasmoid.configuration.gridCellWidth
+                    onValueModified: {
+                        gridPanel.requestChange({ cellWidth: value });
+                        // Changing the value by hand breaks the binding: restore it
+                        value = Qt.binding(() => Plasmoid.configuration.gridCellWidth);
+                    }
+                }
+
+                PlasmaComponents3.Label {
+                    text: "×"
+                }
+
+                PlasmaComponents3.SpinBox {
+                    from: 16
+                    to: 1024
+                    stepSize: 8
+                    value: Plasmoid.configuration.gridCellHeight
+                    // Cells cannot be lower than the tallest shortcut
+                    onValueModified: {
+                        gridPanel.requestChange({ cellHeight: Math.max(value, Math.ceil(gridPanel.largestShortcutSize().height)) });
+                        value = Qt.binding(() => Plasmoid.configuration.gridCellHeight);
+                    }
+                }
+
+                // Icon size of the shortcuts (a shortcut is as wide as its cell)
+                PlasmaComponents3.Label {
+                    text: i18nc("@label:spinbox", "Icon size:")
+                }
+
+                PlasmaComponents3.SpinBox {
+                    from: 16
+                    to: 256
+                    stepSize: 8
+                    value: Plasmoid.configuration.gridIconSize
+                    onValueModified: {
+                        gridPanel.requestChange({ iconSize: value });
+                        value = Qt.binding(() => Plasmoid.configuration.gridIconSize);
+                    }
+                }
+
+                Item {
+                    // empty, under "×"
+                }
+
+                // Gives every shortcut its size again, centered in its cell
+                PlasmaComponents3.Button {
+                    Layout.fillWidth: true
+                    text: i18nc("@action:button", "Resize Icons")
+                    onClicked: gridPanel.requestChange({})
+                }
             }
 
-            PlasmaComponents3.Slider {
-                Layout.fillWidth: true
-                from: 32
-                to: 256
-                stepSize: 8
-                value: Plasmoid.configuration.gridCellWidth
-                onMoved: gridPanel.shortcutIconSizeRequested(value)
-            }
+            // Plasmoids: their own grid; they keep their size
+            ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
 
-            PlasmaComponents3.Label {
-                text: i18nc("@label size in pixels", "%1 px", Plasmoid.configuration.gridCellWidth)
+                RowLayout {
+                    PlasmaComponents3.Label {
+                        text: i18nc("@label:spinbox", "Cell size:")
+                    }
+
+                    PlasmaComponents3.SpinBox {
+                        from: 8
+                        to: 1024
+                        stepSize: 8
+                        value: Plasmoid.configuration.gridPlasmoidCellWidth
+                        onValueModified: {
+                            const config = Plasmoid.configuration;
+                            // Linked: the height follows, keeping the cell proportions
+                            if (config.gridPlasmoidCellLinked) {
+                                config.gridPlasmoidCellHeight = Math.max(8, Math.round(
+                                    config.gridPlasmoidCellHeight * value / config.gridPlasmoidCellWidth));
+                            }
+                            config.gridPlasmoidCellWidth = value;
+                            value = Qt.binding(() => Plasmoid.configuration.gridPlasmoidCellWidth);
+                        }
+                    }
+
+                    PlasmaComponents3.Label {
+                        text: "×"
+                    }
+
+                    PlasmaComponents3.SpinBox {
+                        from: 8
+                        to: 1024
+                        stepSize: 8
+                        value: Plasmoid.configuration.gridPlasmoidCellHeight
+                        onValueModified: {
+                            const config = Plasmoid.configuration;
+                            // Linked: the width follows, keeping the cell proportions
+                            if (config.gridPlasmoidCellLinked) {
+                                config.gridPlasmoidCellWidth = Math.max(8, Math.round(
+                                    config.gridPlasmoidCellWidth * value / config.gridPlasmoidCellHeight));
+                            }
+                            config.gridPlasmoidCellHeight = value;
+                            value = Qt.binding(() => Plasmoid.configuration.gridPlasmoidCellHeight);
+                        }
+                    }
+
+                    // Links width and height: changing one changes the other
+                    PlasmaComponents3.ToolButton {
+                        icon.name: "link"
+                        checkable: true
+                        checked: Plasmoid.configuration.gridPlasmoidCellLinked
+                        onToggled: Plasmoid.configuration.gridPlasmoidCellLinked = checked
+                        display: PlasmaComponents3.AbstractButton.IconOnly
+                        text: i18nc("@action:button", "Link width and height")
+                        PlasmaComponents3.ToolTip.text: text
+                        PlasmaComponents3.ToolTip.visible: hovered
+                        PlasmaComponents3.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    }
+                }
             }
         }
 
-        // Shortcuts fill their cell
         RowLayout {
-            PlasmaComponents3.Label {
+            PlasmaComponents3.CheckBox {
                 Layout.fillWidth: true
-                text: gridPanel.equalIcons
-                    ? i18nc("@info", "Shortcut icons: %1 px", gridPanel.shortcutIconSize)
-                    : i18nc("@info", "Cells too wide: icon sizes vary")
+                text: i18nc("@option:check", "Snap to screen edges")
+                checked: Plasmoid.configuration.gridSnapToEdges
+                onToggled: Plasmoid.configuration.gridSnapToEdges = checked
             }
 
+            // Plasmoids tab: snaps the edges of every plasmoid to their grid
             PlasmaComponents3.Button {
-                text: i18nc("@action:button resize shortcuts and snap them to the grid", "Resize and Snap")
-                onClicked: gridPanel.resizeShortcutsRequested()
+                visible: gridPanel.plasmoidsTab
+                icon.name: "snap-nodes-cusp"
+                text: i18nc("@action:button snap plasmoids to the grid", "Snap to Grid")
+                onClicked: gridPanel.snapPlasmoidsRequested()
             }
-        }
-
-        PlasmaComponents3.CheckBox {
-            text: i18nc("@option:check", "Snap to screen edges")
-            checked: Plasmoid.configuration.gridSnapToEdges
-            onToggled: Plasmoid.configuration.gridSnapToEdges = checked
         }
 
         PlasmaComponents3.Button {
