@@ -43,9 +43,12 @@ git tag "plasma-$version" upstream
 
 # 2. Our changes applied again on the new version
 if ! git merge --no-edit -m "Update to the package of Plasma $version" upstream; then
+    # The installed copy is made for the previous Plasma version: removed, so
+    # that Plasma uses its own, up to date, package until the conflicts are resolved
     echo
     echo "Conflicts between our changes and the new Plasma version." >&2
-    echo "Resolve them (see git status), then: git commit" >&2
+    ./uninstall.sh || true
+    echo "Resolve the conflicts (see git status), then: git commit" >&2
     echo "then: ./install.sh" >&2
     exit 1
 fi

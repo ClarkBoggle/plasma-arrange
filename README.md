@@ -97,7 +97,7 @@ Seeing a new Plasma version, it runs `./update-plasma.sh` first (which can also
 be run directly): it takes the new system package, applies the grid arrangement
 to it again (git merge from the `upstream` branch, which holds the unmodified
 Plasma packages) and reinstalls. If the changes conflict with the new version,
-it stops.
+it removes the installed copy (Plasma then uses its own package) and stops.
 
 ## Files
 
