@@ -6,6 +6,7 @@
 # Uninstall: ./uninstall.sh
 set -euo pipefail
 
+SYSTEM_PACKAGE=/usr/share/plasma/plasmoids/org.kde.desktopcontainment
 TARGET=$HOME/.local/share/plasma/plasmoids/org.kde.desktopcontainment
 # File only found in our package: tells our installed copy from another one
 OURS=contents/ui/GridArrange.qml
@@ -25,11 +26,22 @@ if [ -d "$TARGET" ] && [ ! -L "$TARGET" ] && [ ! -f "$TARGET/$OURS" ]; then
     exit 1
 fi
 
-# Plasma updated since our package was last merged with the system one: update
-# first (update-plasma.sh merges the new system package, then runs this script again)
-version=$(plasmashell --version | awk '{ print $2 }')
-if ! git rev-parse --quiet --verify "refs/tags/plasma-$version" > /dev/null; then
-    echo "Plasma $version is not merged yet: running ./update-plasma.sh first."
+# A merge of a new Plasma version is not finished (conflicts): the package would
+# break the desktop
+if git rev-parse --quiet --verify MERGE_HEAD > /dev/null || [ -n "$(git ls-files --unmerged)" ]; then
+    echo "A merge is in progress: resolve the conflicts and commit first (see git status)." >&2
+    exit 1
+fi
+
+# System package changed since ours was last merged with it (Plasma update, even
+# without a new version number): update first (update-plasma.sh merges the new
+# system package, then runs this script again)
+upstream=$(mktemp -d)
+trap 'rm -rf "$upstream"' EXIT
+git archive upstream package | tar -x -C "$upstream"
+if ! diff -rq "$upstream/package" "$SYSTEM_PACKAGE" > /dev/null; then
+    echo "The system desktop package has changed: running ./update-plasma.sh first."
+    rm -rf "$upstream"
     exec ./update-plasma.sh
 fi
 

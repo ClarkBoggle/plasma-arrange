@@ -28,6 +28,15 @@ KSvg.FrameSvgItem {
     // Whether the Plasmoids tab is shown: the desktop then shows the plasmoid grid
     readonly property bool plasmoidsTab: tabBar.currentIndex === 1
 
+    // Where it was last moved to (it starts where main.qml puts it), within the screen
+    onVisibleChanged: {
+        const config = Plasmoid.configuration;
+        if (visible && config.gridPanelX >= 0 && config.gridPanelY >= 0) {
+            x = Math.max(0, Math.min(config.gridPanelX, parent.width - width));
+            y = Math.max(0, Math.min(config.gridPanelY, parent.height - height));
+        }
+    }
+
     function showTab(plasmoids: bool): void {
         tabBar.currentIndex = plasmoids ? 1 : 0;
     }
@@ -120,6 +129,12 @@ KSvg.FrameSvgItem {
                 xAxis.maximum: gridPanel.parent.width - gridPanel.width
                 yAxis.minimum: 0
                 yAxis.maximum: gridPanel.parent.height - gridPanel.height
+                onActiveChanged: {
+                    if (!active) {
+                        Plasmoid.configuration.gridPanelX = Math.round(gridPanel.x);
+                        Plasmoid.configuration.gridPanelY = Math.round(gridPanel.y);
+                    }
+                }
             }
         }
 

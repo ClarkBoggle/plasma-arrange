@@ -30,16 +30,13 @@ git -C "$worktree" add --all package
 
 if git -C "$worktree" diff --cached --quiet; then
     echo "The system package has not changed since the last update: nothing to merge."
-    # New Plasma version with the same package: tagged too, so that install.sh
-    # knows this version is merged
-    if ! git rev-parse --quiet --verify "refs/tags/plasma-$version" > /dev/null; then
-        git tag "plasma-$version" upstream
-        ./install.sh
-    fi
+    # (a new Plasma version with the same package is tagged too)
+    git tag --force "plasma-$version" upstream > /dev/null
     exit 0
 fi
 git -C "$worktree" commit --quiet -m "org.kde.desktopcontainment package of Plasma $version (unmodified)"
-git tag "plasma-$version" upstream
+# (--force: the package can change without a new version number)
+git tag --force "plasma-$version" upstream > /dev/null
 
 # 2. Our changes applied again on the new version
 if ! git merge --no-edit -m "Update to the package of Plasma $version" upstream; then

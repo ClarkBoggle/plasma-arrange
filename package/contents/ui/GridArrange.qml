@@ -12,6 +12,7 @@ import org.kde.draganddrop as DragDrop
 import org.kde.plasma.private.containmentlayoutmanager as ContainmentLayoutManager
 
 import "GridDrag.js" as GridDrag
+import "GridMath.js" as GridMath
 
 // Arranging the desktop widgets on grids, while the desktop is in edit mode.
 //
@@ -104,9 +105,8 @@ Item {
     }
 
     // Each widget tells when it is selected, moved or resized, and when it gets its
-    // handles
-    // (connected once per widget). All the applet containers are watched, even
-    // without their applet yet: a widget coming from another screen gets its
+    // handles (connected once per widget). All the applet containers are watched,
+    // even without their applet yet: a widget coming from another screen gets its
     // container added to the layout first, and its applet only after (no new
     // childrenChanged then).
     property var watchedWidgets: []
@@ -122,6 +122,7 @@ Item {
                 item.configOverlayItemChanged.connect(() => grid.widgetHandlesChanged(item));
                 item.widthChanged.connect(() => grid.widgetResized(item));
                 item.heightChanged.connect(() => grid.widgetResized(item));
+                item.Drag.dragFinished.connect(action => grid.widgetDragFinished(action));
             }
         }
     }
@@ -139,6 +140,23 @@ Item {
         item.y = geometry.y;
         item.width = geometry.width;
         item.height = geometry.height;
+        const sliding = putGeometries.filter(put => put.item !== item && isSliding(put));
+        sliding.push({ item: item, geometry: geometry, time: Date.now() });
+        putGeometries = sliding;
+    }
+
+    // A widget slides to the place it is put at (animation in main.qml): its x and
+    // y are not there yet. So the geometry it was last put at is kept for the time
+    // of the slide ({ item, geometry, time }), and read from here.
+    property var putGeometries: []
+
+    function isSliding(put: var): bool {
+        return Date.now() - put.time < Kirigami.Units.longDuration;
+    }
+
+    function geometryOf(item: Item): rect {
+        const put = putGeometries.find(put => put.item === item);
+        return put && isSliding(put) ? put.geometry : Qt.rect(item.x, item.y, item.width, item.height);
     }
 
     // Shows the placeholder on the cells of a widget of this geometry, filling them
@@ -184,16 +202,7 @@ Item {
     // Nearest grid line (shifted by offset), or the right/bottom edge (max) if it
     // is closer. The grid starts at the left/top edge, so no snapping is needed there.
     function snap(position: real, offset: real, cellSize: real, max: real): real {
-        const onGrid = Math.round((position - offset) / cellSize) * cellSize + offset;
-        if (config.gridSnapToEdges && max - position < Math.abs(position - onGrid)) {
-            return max;
-        }
-        return clamp(onGrid, max);
-    }
-
-    // The value kept between 0 and max
-    function clamp(value: real, max: real): real {
-        return Math.max(0, Math.min(value, max));
+        return GridMath.snap(position, offset, cellSize, max, config.gridSnapToEdges);
     }
 
     // --- Shortcuts -------------------------------------------------------
@@ -239,6 +248,7 @@ Item {
     // Changes the shortcut grid and icon size. Every shortcut takes its new size,
     // staying centered in the same column and row.
     // Shortcuts stuck to the right or bottom screen edge stay stuck to it.
+    // One that would then overlap another goes to the nearest free cell.
     function setShortcutGrid(cellWidth: int, cellHeight: int, iconSize: int): void {
         const oldCellWidth = config.gridCellWidth;
         const oldCellHeight = config.gridCellHeight;
@@ -248,21 +258,28 @@ Item {
         config.gridCellHeight = cellHeight;
         config.gridIconSize = iconSize;
 
-        for (const item of widgets().filter(isShortcut)) {
-            const onRightEdge = Math.abs(item.x + item.width - appletsLayout.width) < 1;
-            const onBottomEdge = Math.abs(item.y + item.height - appletsLayout.height) < 1;
-            const column = Math.round((item.x - shortcutOffsetX(item.width, oldCellWidth)) / oldCellWidth);
-            const row = Math.round((item.y - shortcutOffsetY(oldIconSize, oldCellHeight)) / oldCellHeight);
+        const shortcuts = widgets().filter(isShortcut);
+        const geometries = shortcuts.map(item => {
+            const old = geometryOf(item);
+            const onRightEdge = Math.abs(old.x + old.width - appletsLayout.width) < 1;
+            const onBottomEdge = Math.abs(old.y + old.height - appletsLayout.height) < 1;
+            const column = Math.round((old.x - shortcutOffsetX(old.width, oldCellWidth)) / oldCellWidth);
+            const row = Math.round((old.y - shortcutOffsetY(oldIconSize, oldCellHeight)) / oldCellHeight);
             const size = shortcutSize(item.applet.plasmoid.title, cellWidth, iconSize);
 
             const maxX = appletsLayout.width - size.width;
             const maxY = appletsLayout.height - size.height;
             const x = onRightEdge ? maxX
-                : clamp(column * cellWidth + shortcutOffsetX(size.width, cellWidth), maxX);
+                : GridMath.clamp(column * cellWidth + shortcutOffsetX(size.width, cellWidth), maxX);
             const y = onBottomEdge ? maxY
-                : clamp(row * cellHeight + shortcutOffsetY(iconSize, cellHeight), maxY);
-            setGeometry(item, Qt.rect(x, y, size.width, size.height));
-        }
+                : GridMath.clamp(row * cellHeight + shortcutOffsetY(iconSize, cellHeight), maxY);
+            return Qt.rect(x, y, size.width, size.height);
+        });
+        // (shortcuts of cells that no longer fit in the screen are all on the last
+        // one; a shortcut is as wide as its cell: no horizontal offset)
+        const separated = separatedGeometries(geometries, 0, cellWidth,
+                                              shortcutOffsetY(iconSize, cellHeight), cellHeight);
+        shortcuts.forEach((item, i) => setGeometry(item, separated[i]));
         saveLater();
     }
 
@@ -288,34 +305,35 @@ Item {
 
     // --- Plasmoids -------------------------------------------------------
 
+    // Minimum widget size of Plasma's layout, lowered to 16 px for small shortcuts
+    // (see main.qml), kept for plasmoids. A new widget gets the size it asks for if
+    // larger than the minimum, otherwise the default size: with 16 px, some
+    // plasmoids asked for 27 px and stayed that small.
+    readonly property real plasmaMinimumItemSize: Kirigami.Units.gridUnit * 3
+
     // Geometry of a plasmoid with its edges snapped to the plasmoid grid
     // (or to the right/bottom screen edge), at least one cell large
-    function snappedPlasmoidGeometry(item: Item): rect {
+    function snappedPlasmoidGeometry(geometry: rect): rect {
         const cellWidth = config.gridPlasmoidCellWidth;
         const cellHeight = config.gridPlasmoidCellHeight;
-        const left = snap(item.x, 0, cellWidth, appletsLayout.width);
-        const top = snap(item.y, 0, cellHeight, appletsLayout.height);
+        const left = snap(geometry.x, 0, cellWidth, appletsLayout.width);
+        const top = snap(geometry.y, 0, cellHeight, appletsLayout.height);
         const right = Math.max(left + cellWidth,
-                               snap(item.x + item.width, 0, cellWidth, appletsLayout.width));
+                               snap(geometry.x + geometry.width, 0, cellWidth, appletsLayout.width));
         const bottom = Math.max(top + cellHeight,
-                                snap(item.y + item.height, 0, cellHeight, appletsLayout.height));
+                                snap(geometry.y + geometry.height, 0, cellHeight, appletsLayout.height));
         return Qt.rect(left, top, right - left, bottom - top);
     }
 
-    // "Snap to Grid": snaps every plasmoid, one after the other. One that would
-    // then overlap another (rounding can make two plasmoids side by side overlap
-    // by a cell) goes to the nearest free place. The geometries are kept in a list:
-    // the plasmoids slide to their new place (main.qml), their x and y are not
-    // there yet.
+    // "Snap to Grid": snaps every plasmoid. One that would then overlap another
+    // (rounding can make two plasmoids side by side overlap by a cell) goes to the
+    // nearest free place.
     function snapAllPlasmoids(): void {
         const plasmoids = widgets().filter(item => !isShortcut(item));
-        const geometries = plasmoids.map(item => Qt.rect(item.x, item.y, item.width, item.height));
-        plasmoids.forEach((item, i) => {
-            const others = geometries.filter((geometry, j) => j !== i);
-            geometries[i] = freeGeometry(snappedPlasmoidGeometry(item), others,
-                                         0, config.gridPlasmoidCellWidth, 0, config.gridPlasmoidCellHeight);
-            setGeometry(item, geometries[i]);
-        });
+        const geometries = plasmoids.map(item => snappedPlasmoidGeometry(geometryOf(item)));
+        const separated = separatedGeometries(geometries, 0, config.gridPlasmoidCellWidth,
+                                              0, config.gridPlasmoidCellHeight);
+        plasmoids.forEach((item, i) => setGeometry(item, separated[i]));
         saveLater();
     }
 
@@ -325,6 +343,7 @@ Item {
     property size sizeBeforeDrag
     property point dragPosition // position while dragged, before any snapping
     property bool dragged: false // it really moved (not only clicked)
+    property bool leaving: false // it is over another screen: main.qml takes it there
 
     // A widget is moved by a press and hold on it (dragActive) or by the move bar
     // of its handles (see watchMoveBar())
@@ -340,6 +359,7 @@ Item {
         draggedItem = item;
         sizeBeforeDrag = Qt.size(item.width, item.height);
         dragged = false;
+        leaving = false;
         // For the desktop of another screen, if it is dragged there
         GridDrag.widget = {
             shortcut: isShortcut(item),
@@ -359,6 +379,11 @@ Item {
         }
         dragPosition = position;
         dragged = true;
+        // (as main.qml finds the desktop under the widget, right after)
+        const desktop = appletsLayout.containmentItem;
+        const center = item.mapToItem(desktop.parent, grab.x, grab.y);
+        const desktopUnder = desktop.containmentItemAt(center.x, center.y);
+        leaving = desktopUnder ? desktopUnder.plasmoid !== Plasmoid : false;
         showPlaceHolder(dropGeometry(item, position), isShortcut(item));
         setHandlesShown(item, false);
 
@@ -381,16 +406,23 @@ Item {
         moveEndedWidget = item;
         Qt.callLater(() => grid.moveEndedWidget = null);
 
+        if (leaving) {
+            return; // (GridDrag.widget is for the desktop it reaches)
+        }
+        GridDrag.widget = null;
         if (!dragged) {
             return;
         }
         // The layout has just placed it: put where the placeholder showed
-        const geometry = dropGeometry(item, dragPosition);
-        setGeometry(item, geometry);
-        saveLater();
-        droppedWidget = item;
-        droppedGeometry = geometry;
-        dropEndTimer.restart();
+        putBack(item, dropGeometry(item, dragPosition));
+    }
+
+    // The drag to another screen ended (action: Qt.MoveAction if it was dropped on
+    // a desktop, which then cleared GridDrag.widget itself)
+    function widgetDragFinished(action: int): void {
+        if (action !== Qt.MoveAction) {
+            GridDrag.widget = null;
+        }
     }
 
     // Where a widget dropped at this position goes: shortcuts get the shortcut size,
@@ -426,58 +458,64 @@ Item {
     // if it overlaps none, or if there is no such place.
     function freeGeometry(geometry: rect, others: var, offsetX: real, cellWidth: real,
                           offsetY: real, cellHeight: real): rect {
-        if (!overlapsAny(geometry, others)) {
+        if (!GridMath.overlapsAny(geometry, others)) {
             return geometry;
         }
-        const xs = gridLines(offsetX, cellWidth, appletsLayout.width - geometry.width);
-        const ys = gridLines(offsetY, cellHeight, appletsLayout.height - geometry.height);
-        let nearest = geometry;
-        let nearestDistance = Infinity;
-        for (const x of xs) {
-            for (const y of ys) {
-                const distance = (x - geometry.x) ** 2 + (y - geometry.y) ** 2;
-                const candidate = Qt.rect(x, y, geometry.width, geometry.height);
-                if (distance < nearestDistance && !overlapsAny(candidate, others)) {
-                    nearest = candidate;
-                    nearestDistance = distance;
-                }
+        const toEdges = config.gridSnapToEdges;
+        const xs = GridMath.gridLines(offsetX, cellWidth, appletsLayout.width - geometry.width, toEdges);
+        const ys = GridMath.gridLines(offsetY, cellHeight, appletsLayout.height - geometry.height, toEdges);
+        const free = GridMath.nearestFree(geometry, others, xs, ys);
+        return free ? Qt.rect(free.x, free.y, geometry.width, geometry.height) : geometry;
+    }
+
+    // These geometries, moved so that none overlaps another: of two overlapping
+    // ones, the first stays and the other goes to the nearest free place
+    function separatedGeometries(geometries: var, offsetX: real, cellWidth: real,
+                                 offsetY: real, cellHeight: real): var {
+        const placed = [];
+        const staying = geometries.map(geometry => {
+            const stays = !GridMath.overlapsAny(geometry, placed);
+            if (stays) {
+                placed.push(geometry);
             }
-        }
-        return nearest;
+            return stays;
+        });
+        return geometries.map((geometry, i) => {
+            if (staying[i]) {
+                return geometry;
+            }
+            const free = freeGeometry(geometry, placed, offsetX, cellWidth, offsetY, cellHeight);
+            placed.push(free);
+            return free;
+        });
     }
 
     // Geometries of the shortcuts or of the plasmoids, but this widget (moved: the
-    // widget itself if it is on this desktop, otherwise null)
+    // widget itself if it is on this desktop, otherwise null). A rotated widget
+    // counts for the rectangle around it.
     function otherWidgets(shortcuts: bool, moved: Item): var {
         return widgets().filter(item => isShortcut(item) === shortcuts && item !== moved)
-            .map(item => Qt.rect(item.x, item.y, item.width, item.height));
-    }
-
-    // The geometry overlaps one of these (more than by rounding errors)
-    function overlapsAny(geometry: rect, others: var): bool {
-        return others.some(other =>
-            Math.min(geometry.x + geometry.width, other.x + other.width) - Math.max(geometry.x, other.x) > 1
-            && Math.min(geometry.y + geometry.height, other.y + other.height) - Math.max(geometry.y, other.y) > 1);
-    }
-
-    // Grid lines from offset to max, and max itself when snapping to the screen edges
-    function gridLines(offset: real, cellSize: real, max: real): var {
-        const lines = [];
-        for (let line = Math.max(0, offset); line <= max; line += cellSize) {
-            lines.push(line);
-        }
-        if (config.gridSnapToEdges && max >= 0 && lines[lines.length - 1] !== max) {
-            lines.push(max);
-        }
-        return lines;
+            .map(item => item.rotation === 0 ? geometryOf(item)
+                : appletsLayout.mapFromItem(item, Qt.rect(0, 0, item.width, item.height)));
     }
 
     // A dropped widget slides to its place (animation in main.qml), and the layout
     // places it once more during the slide, elsewhere if it sees no free space there.
-    // Once the slide is over, it is put back where it was dropped. The same after a
-    // plasmoid resize.
+    // So it is put at its place now, and again once the slide is over. The same
+    // after a plasmoid resize.
     property Item droppedWidget: null
     property rect droppedGeometry
+
+    function putBack(item: Item, geometry: rect): void {
+        if (droppedWidget && droppedWidget !== item) {
+            setGeometry(droppedWidget, droppedGeometry); // (not waiting for its slide)
+        }
+        setGeometry(item, geometry);
+        droppedWidget = item;
+        droppedGeometry = geometry;
+        dropEndTimer.restart();
+        saveLater();
+    }
 
     Timer {
         id: dropEndTimer
@@ -529,9 +567,8 @@ Item {
 
     // A plasmoid resized with its handles: the placeholder shows its edges snapped
     // to the grid, applied when the handle is released (snapping at every mouse
-    // move would be jerky). Over another plasmoid, it gets back the geometry it had
-    // before. The handle tells it is released before the layout places the
-    // plasmoid: put back once the layout is done (see dropEndTimer).
+    // move would be jerky). The handle tells it is released before the layout
+    // places the plasmoid: put back after it (see putBack()).
     property Item resizedPlasmoid: null
     property rect geometryBeforeResize
 
@@ -554,10 +591,8 @@ Item {
         }
         resizedPlasmoid = null;
         appletsLayout.hidePlaceHolder();
-        droppedWidget = item;
-        droppedGeometry = resizedGeometry(item);
-        Qt.callLater(grid.setGeometry, item, droppedGeometry);
-        dropEndTimer.restart();
+        const geometry = resizedGeometry(item);
+        Qt.callLater(grid.putBack, item, geometry);
     }
 
     function widgetResized(item: Item): void {
@@ -566,9 +601,63 @@ Item {
         }
     }
 
+    // Geometry a plasmoid being resized will get: its edges snapped to the grid,
+    // not smaller than Plasma's minimum size (in whole cells), and not over another
+    // plasmoid: the edges that were moved come back, cell by cell, until it
+    // overlaps none (at worst, to the geometry before the resize).
     function resizedGeometry(item: Item): rect {
-        const geometry = snappedPlasmoidGeometry(item);
-        return overlapsAny(geometry, otherWidgets(false, item)) ? geometryBeforeResize : geometry;
+        const cellWidth = config.gridPlasmoidCellWidth;
+        const cellHeight = config.gridPlasmoidCellHeight;
+        const before = geometryBeforeResize;
+        const snapped = snappedPlasmoidGeometry(Qt.rect(item.x, item.y, item.width, item.height));
+        let left = snapped.x;
+        let top = snapped.y;
+        let right = snapped.x + snapped.width;
+        let bottom = snapped.y + snapped.height;
+        // (the handle moves the left or the right edge, the top or the bottom one)
+        const leftMoved = Math.abs(item.x - before.x) > 0.5;
+        const topMoved = Math.abs(item.y - before.y) > 0.5;
+
+        const minimumWidth = Math.ceil(plasmaMinimumItemSize / cellWidth) * cellWidth;
+        const minimumHeight = Math.ceil(plasmaMinimumItemSize / cellHeight) * cellHeight;
+        if (right - left < minimumWidth) {
+            if (leftMoved) {
+                left = right - minimumWidth;
+            } else {
+                right = left + minimumWidth;
+            }
+        }
+        if (bottom - top < minimumHeight) {
+            if (topMoved) {
+                top = bottom - minimumHeight;
+            } else {
+                bottom = top + minimumHeight;
+            }
+        }
+
+        // Every edge that went outwards comes back by a cell, not further than
+        // where it was
+        const others = otherWidgets(false, item);
+        const beforeRight = before.x + before.width;
+        const beforeBottom = before.y + before.height;
+        while (GridMath.overlapsAny(Qt.rect(left, top, right - left, bottom - top), others)) {
+            if (left >= before.x && top >= before.y && right <= beforeRight && bottom <= beforeBottom) {
+                return before; // nothing left to bring back
+            }
+            if (left < before.x) {
+                left = Math.min(before.x, left + cellWidth);
+            }
+            if (top < before.y) {
+                top = Math.min(before.y, top + cellHeight);
+            }
+            if (right > beforeRight) {
+                right = Math.max(beforeRight, right - cellWidth);
+            }
+            if (bottom > beforeBottom) {
+                bottom = Math.max(beforeBottom, bottom - cellHeight);
+            }
+        }
+        return Qt.rect(left, top, right - left, bottom - top);
     }
 
     // Shortcuts have the size of the shortcut grid: no resize handles
@@ -677,15 +766,8 @@ Item {
     // off the grid. From another screen, it is put where the placeholder showed
     // (geometry), with the rotation it had (its new container has none).
     // Otherwise (created by a drop, for instance), a shortcut gets the shortcut size
-    // on the nearest cell, a plasmoid the nearest grid lines. A new plasmoid gets
-    // the size Plasma would give it with its own minimum size (see
-    // plasmaMinimumItemSize).
-    // Minimum widget size of Plasma's layout, lowered to 16 px for small shortcuts
-    // (see main.qml). A new widget gets the size it asks for if larger than the
-    // minimum, otherwise the default size: with 16 px, some plasmoids asked for
-    // 27 px and stayed that small.
-    readonly property real plasmaMinimumItemSize: Kirigami.Units.gridUnit * 3
-
+    // on the nearest cell, a plasmoid the nearest grid lines, with the size Plasma
+    // would give it with its own minimum size (see plasmaMinimumItemSize).
     function placeAddedWidget(appletId: int, geometry: var, rotation: real): void {
         const item = widgets().find(item => item.applet.plasmoid.id === appletId);
         if (!item) {
@@ -721,7 +803,9 @@ Item {
         id: arrivalTimer
         interval: Kirigami.Units.longDuration
         onTriggered: {
-            grid.select(grid.arrivedWidget);
+            if (grid.active) {
+                grid.select(grid.arrivedWidget);
+            }
             grid.arrivedWidget = null;
         }
     }
@@ -785,8 +869,8 @@ Item {
 
     // Above the widgets: takes the hover events, and lets the clicks through,
     // unselecting on a click on the desktop itself. A click on a locked widget is
-    // taken (a click on a shortcut would launch it): it shows the tab of this
-    // widget and selects it.
+    // taken (a click on a shortcut would launch it): a left click shows the tab of
+    // this widget and selects it.
     MouseArea {
         id: hoverBlocker
         parent: grid.appletsLayout
@@ -800,7 +884,8 @@ Item {
                 grid.select(null);
             }
             const locked = grid.lockedWidgetAt(mouse.x, mouse.y);
-            if (locked) {
+            // (the other buttons do nothing on a locked widget)
+            if (locked && mouse.button === Qt.LeftButton) {
                 grid.panel.showTab(!grid.isShortcut(locked));
                 grid.select(locked);
             }
@@ -828,7 +913,8 @@ Item {
     // applet id), and grid settings
     property var savedLayout: null
     readonly property var savedSettings: ["gridCellWidth", "gridCellHeight", "gridIconSize",
-                                          "gridPlasmoidCellWidth", "gridPlasmoidCellHeight"]
+                                          "gridPlasmoidCellWidth", "gridPlasmoidCellHeight",
+                                          "gridPlasmoidCellLinked", "gridSnapToEdges"]
 
     onActiveChanged: {
         select(null);
@@ -860,6 +946,9 @@ Item {
             return;
         }
         savedLayout = null; // only once
+        // (a widget just dropped is not put back where it was dropped)
+        dropEndTimer.stop();
+        droppedWidget = null;
         if (!GridDrag.cancelling) {
             // Clicked here: the other desktops restore theirs when grid mode ends,
             // right after

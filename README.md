@@ -95,7 +95,7 @@ updates. After updating Plasma, from the cloned repository:
 ./install.sh
 ```
 
-Seeing a new Plasma version, it runs `./update-plasma.sh` first (which can also
+Seeing that the system package has changed, it runs `./update-plasma.sh` first (which can also
 be run directly): it takes the new system package, applies the grid arrangement
 to it again and reinstalls. If the changes conflict with the new version, it
 removes the installed copy and stops: Plasma uses its own desktop until
@@ -110,9 +110,10 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 
 | File | Role |
 |---|---|
-| `package/contents/ui/GridArrange.qml` | Grid logic: snapping, shortcut sizes, moves between screens, selection by click, locking of the other tab's widgets, saving and restoring the layout; draws the grid |
-| `package/contents/ui/GridPanel.qml` | The *Arrange Desktop* panel |
+| `package/contents/ui/GridArrange.qml` | Grid logic: snapping, shortcut sizes, no overlaps, moves between screens, selection by click, locking of the other tab's widgets, saving and restoring the layout; draws the grid |
+| `package/contents/ui/GridPanel.qml` | The *Arrange Desktop* panel (moved by its title, its position is kept) |
 | `package/contents/ui/GridLines.qml` | Drawing of a grid |
+| `package/contents/ui/GridMath.js` | Grid computations (snapping, overlaps, nearest free place) |
 | `package/contents/ui/GridDrag.js` | State shared by the desktops of all screens: widget moved to another screen, where moved widgets are, Cancel |
 | `po/template.pot`, `po/fr.po` | Strings to translate, French translation |
 | `install.sh`, `uninstall.sh` | Installation, uninstallation |

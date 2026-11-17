@@ -43,6 +43,14 @@
       <label>Whether widgets dropped near a screen edge stick to it, even off the grid.</label>
       <default>true</default>
     </entry>
+    <entry name="gridPanelX" type="Int">
+      <label>Horizontal position of the Arrange Desktop panel once moved, in pixels (-1: not moved).</label>
+      <default>-1</default>
+    </entry>
+    <entry name="gridPanelY" type="Int">
+      <label>Vertical position of the Arrange Desktop panel once moved, in pixels (-1: not moved).</label>
+      <default>-1</default>
+    </entry>
 
     <entry name="ItemsGeometries" type="String" hidden="true">
       <label>Encoded geometries of items (resource categories).</label>
