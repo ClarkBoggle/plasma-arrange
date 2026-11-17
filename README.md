@@ -94,10 +94,10 @@ updates. After updating Plasma, from the cloned repository:
 ```
 
 Seeing a new Plasma version, it runs `./update-plasma.sh` first (which can also
-be run directly): it takes the new system package, applies our changes to it
-again (git merge from the `upstream` branch, which holds the unmodified Plasma
-packages) and reinstalls. If our changes conflict with the new version, it
-stops.
+be run directly): it takes the new system package, applies the grid arrangement
+to it again (git merge from the `upstream` branch, which holds the unmodified
+Plasma packages) and reinstalls. If the changes conflict with the new version,
+it stops.
 
 ## Files
 
@@ -137,7 +137,7 @@ panel, all the logic is in `GridArrange.qml`. These lines must be carried over
 when a Plasma update changes `main.qml` (`update-plasma.sh` lets git do it).
 
 In total: 57 lines added (12 of them comments), 5 lines of Plasma changed.
-Line numbers are those of our version.
+Line numbers are those of the modified `main.qml`.
 
 **1. Layout cells** (line 309)
 
