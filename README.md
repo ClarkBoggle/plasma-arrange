@@ -105,6 +105,7 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 | `package/contents/ui/GridArrange.qml` | Grid logic: snapping, shortcut sizes, saving and restoring the layout; draws the grid |
 | `package/contents/ui/GridPanel.qml` | The *Arrange Desktop* panel |
 | `package/contents/ui/GridLines.qml` | Drawing of a grid |
+| `package/contents/ui/GridDrag.js` | Widget moved to another screen, shared by the desktops of all screens |
 | `po/template.pot`, `po/fr.po` | Strings to translate, French translation |
 | `install.sh`, `uninstall.sh` | Installation, uninstallation |
 | `build-translations.sh` | Builds the translations (called by `install.sh`) |
@@ -188,11 +189,12 @@ told when a drag starts or ends, and when a widget is resized.
 
 **3. While dragging** (line 383)
 
-The position is passed on, so that the green placeholder shows the snapped place.
+The position is passed on, so that the green placeholder shows the snapped place,
+and the point where the mouse holds the widget, for a move to another screen.
 
 ```diff
                  onUserDrag: (newPosition, dragCenter) => {
-+                    gridArrange.widgetMoved(appletContainer, newPosition);
++                    gridArrange.widgetMoved(appletContainer, newPosition, dragCenter);
 +
                      const pos = mapToItem(root.parent, dragCenter.x, dragCenter.y);
 ```
@@ -200,7 +202,7 @@ The position is passed on, so that the green placeholder shows the snapped place
 **4. The `GridArrange` instance** (line 410, after `placeHolder`)
 
 Below the widgets; active only in edit mode, on a *Desktop* layout (not
-Folder View).
+Folder View). It gets the panel, to know and change its tab.
 
 ```diff
 +            GridArrange {
@@ -209,7 +211,7 @@ Folder View).
 +                z: -1
 +                appletsLayout: appletsLayout
 +                active: root.isContainment && !root.isFolder && Plasmoid.containment.corona.editMode
-+                plasmoidsTab: gridPanel.plasmoidsTab
++                panel: gridPanel
 +            }
 ```
 

@@ -28,6 +28,10 @@ KSvg.FrameSvgItem {
     // Whether the Plasmoids tab is shown: the desktop then shows the plasmoid grid
     readonly property bool plasmoidsTab: tabBar.currentIndex === 1
 
+    function showTab(plasmoids: bool): void {
+        tabBar.currentIndex = plasmoids ? 1 : 0;
+    }
+
     // function (): height of the tallest shortcut, the lowest possible shortcut cell
     property var tallestShortcutHeight
     // function (cellWidth, cellHeight): largest icon size keeping shortcuts inside their cell

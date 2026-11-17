@@ -380,7 +380,7 @@ ContainmentItem {
                 }
 
                 onUserDrag: (newPosition, dragCenter) => {
-                    gridArrange.widgetMoved(appletContainer, newPosition);
+                    gridArrange.widgetMoved(appletContainer, newPosition, dragCenter);
 
                     const pos = mapToItem(root.parent, dragCenter.x, dragCenter.y);
                     const newCont = root.containmentItemAt(pos.x, pos.y);
@@ -413,7 +413,7 @@ ContainmentItem {
                 z: -1
                 appletsLayout: appletsLayout
                 active: root.isContainment && !root.isFolder && Plasmoid.containment.corona.editMode
-                plasmoidsTab: gridPanel.plasmoidsTab
+                panel: gridPanel
             }
 
             component FolderViewLayerLoader: Loader {
