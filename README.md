@@ -116,9 +116,6 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 | `package/contents/ui/main.qml` | About 60 lines, marked *Grid arrangement*: see [Changes to main.qml](#changes-to-mainqml) |
 | `package/contents/config/main.xml` | The `grid*` settings |
 
-**Generated** (not in git): `package/contents/locale/`, the translation
-catalogs, holding Plasma's desktop translations plus ours.
-
 All the other files of `package/` are Plasma's, unchanged.
 
 To see every change: `git diff plasma-6.8.2 main -- package`
