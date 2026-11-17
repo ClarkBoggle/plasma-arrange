@@ -118,8 +118,6 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 
 All the other files of `package/` are Plasma's, unchanged.
 
-To see every change: `git diff plasma-6.8.2 main -- package`
-
 ## Changes to main.qml
 
 `main.qml` is the main file of Plasma's desktop. It is kept as close to the
