@@ -11,8 +11,7 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
   The grid and shortcut sizes limit each other, so that no shortcut overflows
   its cell.
 - **Plasmoids** tab: the other widgets snap to their own grid, when moved or
-  resized; *Snap to Grid* aligns all of them at once (only useful for plasmoids
-  stuck to the screen edges).
+  resized; *Snap to Grid* aligns all of them at once.
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
   they were when entering edit mode, on all screens (widgets moved to another
   screen go back to theirs). Deleted widgets are not recreated.
