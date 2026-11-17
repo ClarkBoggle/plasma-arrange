@@ -40,6 +40,7 @@ KSvg.FrameSvgItem {
     // New shortcut cell size or icon size: the grid and the shortcuts follow
     signal shortcutGridChangeRequested(int cellWidth, int cellHeight, int iconSize)
     signal snapPlasmoidsRequested()
+    signal snapShortcutsRequested()
     // Keeps the changes and leaves edit mode
     signal saveRequested()
     // Puts everything back as it was when edit mode started, and leaves it
@@ -200,6 +201,13 @@ KSvg.FrameSvgItem {
                     }
                 }
 
+                // Puts every shortcut back on its nearest cell, at the shortcut size
+                PlasmaComponents3.Button {
+                    Layout.columnSpan: 2
+                    icon.name: "snap-nodes-cusp"
+                    text: i18nc("@action:button snap shortcuts to the grid", "Snap to Grid")
+                    onClicked: gridPanel.snapShortcutsRequested()
+                }
             }
 
             // Plasmoids: their own grid; they keep their size.

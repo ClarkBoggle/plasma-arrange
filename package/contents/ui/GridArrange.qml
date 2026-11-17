@@ -58,6 +58,9 @@ Item {
         function onSnapPlasmoidsRequested(): void {
             grid.snapAllPlasmoids();
         }
+        function onSnapShortcutsRequested(): void {
+            grid.refitShortcuts();
+        }
         function onSaveRequested(): void {
             Plasmoid.containment.corona.editMode = false;
         }
@@ -501,30 +504,39 @@ Item {
             && event.mimeData.formats.indexOf("text/x-plasmoidinstanceid") !== -1;
     }
 
+    // Shows where the widget from another screen would go (incomingGeometry)
+    function incomingDragMoved(event: var): void {
+        if (!isWidgetDrag(event)) {
+            return;
+        }
+        const widget = GridDrag.widget;
+        // Held by the mouse at the same point as its image (in proportion for a
+        // shortcut, which takes the shortcut size of this desktop)
+        const size = widget.shortcut
+            ? shortcutSize(widget.title, config.gridCellWidth, config.gridIconSize)
+            : Qt.size(widget.width, widget.height);
+        const position = Qt.point(event.x - widget.grabX * size.width / widget.width,
+                                  event.y - widget.grabY * size.height / widget.height);
+        incomingGeometry = dropGeometryOf(widget.shortcut, widget.title, size, position);
+        showPlaceHolder(incomingGeometry, widget.shortcut);
+        // Only the kind of widget of the tab shown can be dropped
+        panel.showTab(!widget.shortcut);
+    }
+
     // Drop area of the desktop (called after main.qml's handlers)
     Connections {
         target: grid.appletsLayout.parent
 
+        // Over a shortcut (it has its own drop area), each mouse move gives a
+        // dragLeave and a dragEnter, no dragMove
         function onDragEnter(event: var): void {
             grid.incomingDrag = grid.isWidgetDrag(event);
+            grid.incomingGeometry = null;
+            grid.incomingDragMoved(event);
         }
 
         function onDragMove(event: var): void {
-            if (!grid.isWidgetDrag(event)) {
-                return;
-            }
-            const widget = GridDrag.widget;
-            // Held by the mouse at the same point as its image (in proportion for a
-            // shortcut, which takes the shortcut size of this desktop)
-            const size = widget.shortcut
-                ? grid.shortcutSize(widget.title, grid.config.gridCellWidth, grid.config.gridIconSize)
-                : Qt.size(widget.width, widget.height);
-            const position = Qt.point(event.x - widget.grabX * size.width / widget.width,
-                                      event.y - widget.grabY * size.height / widget.height);
-            grid.incomingGeometry = grid.dropGeometryOf(widget.shortcut, widget.title, size, position);
-            grid.showPlaceHolder(grid.incomingGeometry, widget.shortcut);
-            // Only the kind of widget of the tab shown can be dropped
-            grid.panel.showTab(!widget.shortcut);
+            grid.incomingDragMoved(event);
         }
 
         // (incomingGeometry is used when the widget is added, right after)
@@ -532,9 +544,10 @@ Item {
             grid.incomingDrag = false;
         }
 
+        // The drag also leaves the desktop when it goes over a shortcut (its own
+        // drop area): incomingGeometry is kept, as it can still be dropped there
         function onDragLeave(event: var): void {
             grid.incomingDrag = false;
-            grid.incomingGeometry = null;
         }
     }
 
@@ -545,7 +558,9 @@ Item {
         function onAppletAdded(applet: var): void {
             GridDrag.desktopOf[applet.id] = Plasmoid.id; // for Cancel
             if (grid.active) {
-                Qt.callLater(grid.placeAddedWidget, applet.id, grid.incomingGeometry,
+                // (incomingGeometry may be left from a drag that went elsewhere)
+                Qt.callLater(grid.placeAddedWidget, applet.id,
+                             GridDrag.widget ? grid.incomingGeometry : null,
                              GridDrag.widget?.rotation ?? 0);
             }
             grid.incomingDrag = false;

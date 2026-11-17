@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: plasma-arrange\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 19:02+0100\n"
+"POT-Creation-Date: 2026-11-17 19:18+0100\n"
 "PO-Revision-Date: 2026-11-17 06:02+0100\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -16,57 +16,62 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: package/contents/ui/GridPanel.qml:109
+#: package/contents/ui/GridPanel.qml:110
 msgctxt "@title"
 msgid "Arrange Desktop"
 msgstr "Agencer le bureau"
 
-#: package/contents/ui/GridPanel.qml:134
+#: package/contents/ui/GridPanel.qml:135
 msgctxt "@title:tab desktop shortcuts (Icon widgets)"
 msgid "Shortcuts"
 msgstr "Raccourcis"
 
-#: package/contents/ui/GridPanel.qml:137
+#: package/contents/ui/GridPanel.qml:138
 msgctxt "@title:tab other desktop widgets"
 msgid "Plasmoids"
 msgstr "Plasmoïdes"
 
-#: package/contents/ui/GridPanel.qml:156 package/contents/ui/GridPanel.qml:216
+#: package/contents/ui/GridPanel.qml:157 package/contents/ui/GridPanel.qml:224
 msgctxt "@label:spinbox"
 msgid "Cell size:"
 msgstr "Taille des cases :"
 
-#: package/contents/ui/GridPanel.qml:189
+#: package/contents/ui/GridPanel.qml:190
 msgctxt "@label:spinbox"
 msgid "Icon size:"
 msgstr "Taille des icônes :"
 
-#: package/contents/ui/GridPanel.qml:252
+#: package/contents/ui/GridPanel.qml:208
+msgctxt "@action:button snap shortcuts to the grid"
+msgid "Snap to Grid"
+msgstr "Aligner sur la grille"
+
+#: package/contents/ui/GridPanel.qml:260
 msgctxt "@action:button"
 msgid "Link width and height"
 msgstr "Lier la largeur et la hauteur"
 
-#: package/contents/ui/GridPanel.qml:269
+#: package/contents/ui/GridPanel.qml:277
 msgctxt "@option:check"
 msgid "Snap to screen edges"
 msgstr "Aimanter aux bords de l'écran"
 
-#: package/contents/ui/GridPanel.qml:277
+#: package/contents/ui/GridPanel.qml:285
 msgctxt "@info screen edges the widgets snap to"
 msgid "(Right and Bottom)"
 msgstr "(droit et bas)"
 
-#: package/contents/ui/GridPanel.qml:294
+#: package/contents/ui/GridPanel.qml:302
 msgctxt "@action:button snap plasmoids to the grid"
 msgid "Snap to Grid"
 msgstr "Aligner sur la grille"
 
-#: package/contents/ui/GridPanel.qml:309
+#: package/contents/ui/GridPanel.qml:317
 msgctxt "@action:button keep the changes and leave grid mode"
 msgid "Save"
 msgstr "Enregistrer"
 
-#: package/contents/ui/GridPanel.qml:315
+#: package/contents/ui/GridPanel.qml:323
 msgctxt "@action:button undo all changes and leave grid mode"
 msgid "Cancel"
 msgstr "Annuler"

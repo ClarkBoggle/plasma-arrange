@@ -9,7 +9,8 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
   Each shortcut's height takes into account the number of lines of its name
   (1 or 2), so that its icon keeps exactly the chosen size.\
   The grid and shortcut sizes limit each other, so that no shortcut overflows
-  its cell. They cannot be resized by hand.
+  its cell. They cannot be resized by hand; *Snap to Grid* puts them all back
+  on their cells.
 - **Plasmoids** tab: the other widgets snap to their own grid when moved, and
   keep the size given by hand; *Snap to Grid* aligns and resizes all of them at
   once.
