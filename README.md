@@ -15,11 +15,13 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 
 A desktop in edit mode, **Shortcuts** tab: the shortcut grid, shortcuts of the
 same size with their icons aligned along each row, the trash snapped to the
-bottom-right corner of the screen.
+bottom-right corner of the screen. A shortcut is selected (KCalc): handles to
+resize it, and Plasma's buttons beside it.
 
 ![Desktop in edit mode, Shortcuts tab](docs/desktop-shortcuts.jpg)
 
-The same desktop, **Plasmoids** tab: the plasmoid grid, the widgets snapped to it.
+The same desktop, **Plasmoids** tab: the plasmoid grid (32×32 cells), the
+widgets snapped to it. A plasmoid is selected (CPU Usage).
 
 ![Desktop in edit mode, Plasmoids tab](docs/desktop-plasmoids.jpg)
 
