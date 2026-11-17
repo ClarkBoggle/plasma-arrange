@@ -20,3 +20,8 @@ var desktopOf = {};
 
 // Cancel was clicked: every desktop restores its layout when grid mode ends
 var cancelling = false;
+
+// The GridArrange item of every desktop: the panels of plasma-pannel (another
+// package, same shell) load this script too, and ask them the plasmoid grid of
+// the screen of a popup (GridArrange.plasmoidCellOn())
+var desktops = [];

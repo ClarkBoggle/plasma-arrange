@@ -76,6 +76,22 @@ Item {
         panel.tallestShortcutHeight = tallestShortcutHeight;
         panel.largestIconSize = largestIconSize;
         watchWidgets();
+        GridDrag.desktops.push(grid);
+    }
+
+    Component.onDestruction: {
+        GridDrag.desktops = GridDrag.desktops.filter(item => item && item !== grid);
+    }
+
+    // Plasmoid grid cell of this desktop if it is the one shown on the screen
+    // named screenName, otherwise null. For the panels of plasma-pannel, which
+    // size the popups of their widgets on it (see GridDrag.desktops).
+    function plasmoidCellOn(screenName: string): var {
+        if (Plasmoid.pluginName !== "org.kde.desktopcontainment" || !Plasmoid.isContainment
+                || !grid.Window.window || !grid.visible || grid.Screen.name !== screenName) {
+            return null;
+        }
+        return { width: config.gridPlasmoidCellWidth, height: config.gridPlasmoidCellHeight };
     }
 
     // Grid of the tab shown
