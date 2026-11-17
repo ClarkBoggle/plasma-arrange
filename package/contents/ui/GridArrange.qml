@@ -268,6 +268,30 @@ Item {
         showPlaceHolder(dropGeometry(item, position));
     }
 
+    // A shortcut added in grid mode (moved from another screen, or created by a drop)
+    // is placed by the layout where it was dropped, with its former size: it gets the
+    // shortcut size of this desktop, on the nearest cell. Once the layout has placed it.
+    Connections {
+        target: Plasmoid
+        function onAppletAdded(applet: var): void {
+            if (grid.active) {
+                Qt.callLater(grid.snapAddedShortcut, applet.id);
+            }
+        }
+    }
+
+    function snapAddedShortcut(appletId: int): void {
+        const item = widgets().find(item => item.applet.plasmoid.id === appletId);
+        if (!item || !isShortcut(item)) {
+            return;
+        }
+        // Keeps the shortcut centered where it was dropped
+        const size = shortcutSize(item.applet.plasmoid.title, config.gridCellWidth, config.gridIconSize);
+        const position = Qt.point(item.x + (item.width - size.width) / 2, item.y + (item.height - size.height) / 2);
+        setGeometry(item, dropGeometry(item, position));
+        saveLater();
+    }
+
     // --- Resizing a plasmoid with its handles ------------------------------
     // The placeholder shows the snapped size during the resize, and the snapped size
     // is applied once, when the handle is released: snapping at every mouse move
