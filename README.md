@@ -12,8 +12,20 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
   its cell.
 - **Plasmoids** tab: the other widgets snap to their own grid, when moved or
   resized; *Snap to Grid* aligns all of them at once.
+- While a widget moves, a green rectangle shows the grid cells where it will
+  go.
+- **Several screens**: a widget dragged to another screen snaps to the grid of
+  that screen (the panel there switches to its tab); a shortcut takes the
+  shortcut size of that screen, a plasmoid keeps its size and rotation.
+- **Selection by click**: a widget is selected (handles shown) by a click, not
+  when the mouse goes over it, and stays selected until another widget or the
+  desktop is clicked. No tooltips on shortcuts, no handles while moving.
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
-  they were when entering edit mode.
+  they were when entering edit mode, on all screens (widgets moved to another
+  screen go back to theirs).
+
+Default grids: shortcut cells of 96×92 px with 56 px icons, plasmoid cells of
+16×16 px.
 
 ![The Arrange Desktop panel: Shortcuts tab (left) and Plasmoids tab (right)](docs/panel.png)
 
@@ -102,10 +114,10 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 
 | File | Role |
 |---|---|
-| `package/contents/ui/GridArrange.qml` | Grid logic: snapping, shortcut sizes, saving and restoring the layout; draws the grid |
+| `package/contents/ui/GridArrange.qml` | Grid logic: snapping, shortcut sizes, moves between screens, selection by click, saving and restoring the layout; draws the grid |
 | `package/contents/ui/GridPanel.qml` | The *Arrange Desktop* panel |
 | `package/contents/ui/GridLines.qml` | Drawing of a grid |
-| `package/contents/ui/GridDrag.js` | Widget moved to another screen, shared by the desktops of all screens |
+| `package/contents/ui/GridDrag.js` | State shared by the desktops of all screens: widget moved to another screen, where moved widgets are, Cancel |
 | `po/template.pot`, `po/fr.po` | Strings to translate, French translation |
 | `install.sh`, `uninstall.sh` | Installation, uninstallation |
 | `build-translations.sh` | Builds the translations (called by `install.sh`) |
