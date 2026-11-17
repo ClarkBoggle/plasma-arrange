@@ -17,11 +17,11 @@
 
     <entry name="gridCellWidth" type="Int">
       <label>Width of a grid cell, in pixels.</label>
-      <default>72</default>
+      <default>96</default>
     </entry>
     <entry name="gridCellHeight" type="Int">
       <label>Height of a grid cell, in pixels.</label>
-      <default>80</default>
+      <default>84</default>
     </entry>
     <entry name="gridIconSize" type="Int">
       <label>Icon size of the shortcuts on the grid, in pixels.</label>
