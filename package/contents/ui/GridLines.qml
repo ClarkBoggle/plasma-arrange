@@ -8,7 +8,7 @@ import org.kde.kirigami as Kirigami
 
 // Draws the arrangement grid behind the desktop widgets.
 // The origin is the top-left corner of the applets layout,
-// which is also the origin used by AppletsLayout to snap widgets.
+// which is also the origin of the grids used by GridArrange.
 Canvas {
     id: gridLines
 

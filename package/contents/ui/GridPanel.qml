@@ -10,7 +10,8 @@ import org.kde.plasma.components as PlasmaComponents3
 import org.kde.ksvg as KSvg
 import org.kde.kirigami as Kirigami
 
-// Small floating panel shown in grid mode (desktop edit mode), to set up the grid.
+// Small floating panel shown in grid mode (desktop edit mode), to set up the grids
+// (see GridArrange.qml).
 // It can be moved by dragging its title.
 // The interface stays in English: the i18n contexts end with "grid panel" so that
 // no existing translation of the desktop containment is picked up.
@@ -28,30 +29,51 @@ KSvg.FrameSvgItem {
     // Whether the Plasmoids tab is shown: the desktop then shows the plasmoid grid
     readonly property bool plasmoidsTab: tabBar.currentIndex === 1
 
-    // function (): size of the largest shortcut, the smallest possible cell size
-    property var largestShortcutSize
+    // function (): height of the tallest shortcut, the lowest possible shortcut cell
+    property var tallestShortcutHeight
     // function (cellWidth, cellHeight): largest icon size keeping shortcuts inside their cell
     property var largestIconSize
 
+    // New shortcut cell size or icon size: the grid and the shortcuts follow
+    signal shortcutGridChangeRequested(int cellWidth, int cellHeight, int iconSize)
     signal snapPlasmoidsRequested()
-    // Puts everything back as it was when grid mode started
+    // Keeps the changes and leaves edit mode
+    signal saveRequested()
+    // Puts everything back as it was when edit mode started, and leaves it
     signal cancelRequested()
 
-    // New cell size or icon size chosen in the panel: the grid and the shortcuts follow
-    signal gridChangeRequested(int cellWidth, int cellHeight, int iconSize)
-
-    // Asks for a change of one value, the others staying as they are.
-    // A shortcut, as wide as its cell, is never narrower than its icon, and an icon
-    // cannot be so big that a shortcut overflows its cell.
-    function requestChange(changes: var): void {
+    // Asks for a change of the shortcut grid, the other values staying as they are.
+    // A shortcut, as wide as its cell, is never narrower than its icon, an icon cannot
+    // be so big that a shortcut overflows its cell, and the cells cannot be made
+    // lower than the tallest shortcut.
+    function changeShortcutGrid(changes: var): void {
         const config = Plasmoid.configuration;
-        const cellHeight = changes.cellHeight ?? config.gridCellHeight;
+        const cellHeight = changes.cellHeight !== undefined
+            ? Math.max(changes.cellHeight, Math.ceil(tallestShortcutHeight()))
+            : config.gridCellHeight;
         let iconSize = changes.iconSize ?? config.gridIconSize;
         const cellWidth = Math.max(changes.cellWidth ?? config.gridCellWidth, iconSize);
         if (changes.iconSize !== undefined) {
             iconSize = Math.min(iconSize, largestIconSize(cellWidth, cellHeight));
         }
-        gridChangeRequested(cellWidth, cellHeight, iconSize);
+        shortcutGridChangeRequested(cellWidth, cellHeight, iconSize);
+    }
+
+    // Changes the plasmoid cell size. When width and height are linked, the other one
+    // follows, keeping the cell proportions.
+    function changePlasmoidCell(changes: var): void {
+        const config = Plasmoid.configuration;
+        let width = changes.width ?? config.gridPlasmoidCellWidth;
+        let height = changes.height ?? config.gridPlasmoidCellHeight;
+        if (config.gridPlasmoidCellLinked) {
+            if (changes.width !== undefined) {
+                height = Math.max(8, Math.round(config.gridPlasmoidCellHeight * width / config.gridPlasmoidCellWidth));
+            } else {
+                width = Math.max(8, Math.round(config.gridPlasmoidCellWidth * height / config.gridPlasmoidCellHeight));
+            }
+        }
+        config.gridPlasmoidCellWidth = width;
+        config.gridPlasmoidCellHeight = height;
     }
 
     ColumnLayout {
@@ -136,7 +158,7 @@ KSvg.FrameSvgItem {
                     stepSize: 8
                     value: Plasmoid.configuration.gridCellWidth
                     onValueModified: {
-                        gridPanel.requestChange({ cellWidth: value });
+                        gridPanel.changeShortcutGrid({ cellWidth: value });
                         // Changing the value by hand breaks the binding: restore it
                         value = Qt.binding(() => Plasmoid.configuration.gridCellWidth);
                     }
@@ -151,9 +173,8 @@ KSvg.FrameSvgItem {
                     to: 1024
                     stepSize: 8
                     value: Plasmoid.configuration.gridCellHeight
-                    // Cells cannot be lower than the tallest shortcut
                     onValueModified: {
-                        gridPanel.requestChange({ cellHeight: Math.max(value, Math.ceil(gridPanel.largestShortcutSize().height)) });
+                        gridPanel.changeShortcutGrid({ cellHeight: value });
                         value = Qt.binding(() => Plasmoid.configuration.gridCellHeight);
                     }
                 }
@@ -170,7 +191,7 @@ KSvg.FrameSvgItem {
                     stepSize: 8
                     value: Plasmoid.configuration.gridIconSize
                     onValueModified: {
-                        gridPanel.requestChange({ iconSize: value });
+                        gridPanel.changeShortcutGrid({ iconSize: value });
                         value = Qt.binding(() => Plasmoid.configuration.gridIconSize);
                     }
                 }
@@ -197,13 +218,7 @@ KSvg.FrameSvgItem {
                         stepSize: 8
                         value: Plasmoid.configuration.gridPlasmoidCellWidth
                         onValueModified: {
-                            const config = Plasmoid.configuration;
-                            // Linked: the height follows, keeping the cell proportions
-                            if (config.gridPlasmoidCellLinked) {
-                                config.gridPlasmoidCellHeight = Math.max(8, Math.round(
-                                    config.gridPlasmoidCellHeight * value / config.gridPlasmoidCellWidth));
-                            }
-                            config.gridPlasmoidCellWidth = value;
+                            gridPanel.changePlasmoidCell({ width: value });
                             value = Qt.binding(() => Plasmoid.configuration.gridPlasmoidCellWidth);
                         }
                     }
@@ -218,13 +233,7 @@ KSvg.FrameSvgItem {
                         stepSize: 8
                         value: Plasmoid.configuration.gridPlasmoidCellHeight
                         onValueModified: {
-                            const config = Plasmoid.configuration;
-                            // Linked: the width follows, keeping the cell proportions
-                            if (config.gridPlasmoidCellLinked) {
-                                config.gridPlasmoidCellWidth = Math.max(8, Math.round(
-                                    config.gridPlasmoidCellWidth * value / config.gridPlasmoidCellHeight));
-                            }
-                            config.gridPlasmoidCellHeight = value;
+                            gridPanel.changePlasmoidCell({ height: value });
                             value = Qt.binding(() => Plasmoid.configuration.gridPlasmoidCellHeight);
                         }
                     }
@@ -273,7 +282,7 @@ KSvg.FrameSvgItem {
             PlasmaComponents3.Button {
                 icon.name: "document-save"
                 text: i18nc("@action:button keep the changes and leave grid mode, grid panel", "Save")
-                onClicked: Plasmoid.containment.corona.editMode = false
+                onClicked: gridPanel.saveRequested()
             }
 
             PlasmaComponents3.Button {
