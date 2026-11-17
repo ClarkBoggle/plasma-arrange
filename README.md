@@ -11,18 +11,11 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
   The grid and shortcut sizes limit each other, so that no shortcut overflows
   its cell.
 - **Plasmoids** tab: the other widgets snap to their own grid, when moved or
-  resized; *Snap to Grid* aligns all of them at once.
-- While a widget moves, a green rectangle shows the grid cells where it will
-  go.
-- **Several screens**: a widget dragged to another screen snaps to the grid of
-  that screen (the panel there switches to its tab); a shortcut takes the
-  shortcut size of that screen, a plasmoid keeps its size and rotation.
-- **Selection by click**: a widget is selected (handles shown) by a click, not
-  when the mouse goes over it, and stays selected until another widget or the
-  desktop is clicked. No tooltips on shortcuts, no handles while moving.
+  resized; *Snap to Grid* aligns all of them at once (only useful for plasmoids
+  stuck to the screen edges).
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
   they were when entering edit mode, on all screens (widgets moved to another
-  screen go back to theirs).
+  screen go back to theirs). Deleted widgets are not recreated.
 
 Default grids: shortcut cells of 96×92 px with 56 px icons, plasmoid cells of
 16×16 px.
@@ -35,7 +28,7 @@ bottom-right corner of the screen.
 
 [![Desktop in edit mode, Shortcuts tab](docs/desktop-shortcuts.jpg)](docs/desktop-shortcuts.jpg?raw=true)
 
-The same desktop, **Plasmoids** tab: the plasmoid grid (32×32 cells), the
+The same desktop, **Plasmoids** tab: the plasmoid grid (16×16 cells), the
 widgets snapped to it.
 
 [![Desktop in edit mode, Plasmoids tab](docs/desktop-plasmoids.jpg)](docs/desktop-plasmoids.jpg?raw=true)
@@ -122,6 +115,7 @@ from Plasma 6.8.2 (tag `plasma-6.8.2`). Compared to it:
 | `install.sh`, `uninstall.sh` | Installation, uninstallation |
 | `build-translations.sh` | Builds the translations (called by `install.sh`) |
 | `update-plasma.sh` | Update after a Plasma update |
+| `docs/scenes/` | Scenes of the README pictures, rendered by `docs/scenes/render.sh` |
 
 **Modified**
 
