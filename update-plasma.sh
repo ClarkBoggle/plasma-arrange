@@ -40,11 +40,11 @@ if ! git merge --no-edit -m "Update to the package of Plasma $version" upstream;
     echo
     echo "Conflicts between our changes and the new Plasma version." >&2
     echo "Resolve them (see git status), then: git commit" >&2
-    echo "then: ./build-translations.sh && systemctl --user restart plasma-plasmashell" >&2
+    echo "then: ./install.sh" >&2
     exit 1
 fi
 
-# 3. Translations rebuilt with the new system catalogs, then the desktop reloaded
-./build-translations.sh
-systemctl --user restart plasma-plasmashell
-echo "Package updated to Plasma $version, desktop reloaded."
+# 3. Installed again: translations rebuilt with the new system catalogs,
+#    package copied, desktop reloaded
+./install.sh
+echo "Package updated to Plasma $version."

@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-# Uninstalls plasma-arrange: removes the link made by install.sh, so Plasma
+# Uninstalls plasma-arrange: removes the copy made by install.sh, so Plasma
 # uses the system desktop package again, and reloads the desktop.
 # Widget positions and grid settings stay in the Plasma configuration.
 set -euo pipefail
 
-LINK=$HOME/.local/share/plasma/plasmoids/org.kde.desktopcontainment
+TARGET=$HOME/.local/share/plasma/plasmoids/org.kde.desktopcontainment
+OURS=contents/ui/GridArrange.qml
 
-if [ -L "$LINK" ]; then
-    rm "$LINK"
+if [ -L "$TARGET" ] || [ -f "$TARGET/$OURS" ]; then
+    rm -rf "$TARGET"
     systemctl --user restart plasma-plasmashell
     echo "Uninstalled: Plasma uses the system desktop package again (desktop reloaded)."
-elif [ -e "$LINK" ]; then
-    echo "$LINK is not a link made by install.sh: left untouched." >&2
+elif [ -e "$TARGET" ]; then
+    echo "$TARGET is another copy of the desktop package, not ours: left untouched." >&2
     exit 1
 else
-    echo "Not installed (no link at $LINK)."
+    echo "Not installed (nothing at $TARGET)."
 fi
