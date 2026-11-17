@@ -1,0 +1,73 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the kde-overlay package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: kde-overlay\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-17 06:02+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: package/contents/ui/GridPanel.qml:104
+msgctxt "@title"
+msgid "Arrange"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:129
+msgctxt "@title:tab desktop shortcuts (Icon widgets)"
+msgid "Shortcuts"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:132
+msgctxt "@title:tab other desktop widgets"
+msgid "Plasmoids"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:151 package/contents/ui/GridPanel.qml:211
+msgctxt "@label:spinbox"
+msgid "Cell size:"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:184
+msgctxt "@label:spinbox"
+msgid "Icon size:"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:247
+msgctxt "@action:button"
+msgid "Link width and height"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:264
+msgctxt "@option:check"
+msgid "Snap to screen edges"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:272
+msgctxt "@info screen edges the widgets snap to"
+msgid "(Right and Bottom)"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:286
+msgctxt "@action:button snap plasmoids to the grid"
+msgid "Snap to Grid"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:301
+msgctxt "@action:button keep the changes and leave grid mode"
+msgid "Save"
+msgstr ""
+
+#: package/contents/ui/GridPanel.qml:307
+msgctxt "@action:button undo all changes and leave grid mode"
+msgid "Cancel"
+msgstr ""
