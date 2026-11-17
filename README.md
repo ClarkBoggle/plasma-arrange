@@ -240,6 +240,10 @@ back as it was (`restoreSavedLayout()`), then leaves.
 +        }
 ```
 
+## Credits
+
+Written with [Claude Code](https://claude.com/claude-code).
+
 ## License
 
 The package is derived from Plasma's desktop containment, licensed under the
