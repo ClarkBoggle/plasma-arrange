@@ -11,6 +11,8 @@ In desktop edit mode, a grid is drawn and an **Arrange Desktop** panel appears:
 - **Save** keeps the changes; **Cancel** puts every widget and setting back as
   they were when entering edit mode.
 
+![The Arrange Desktop panel: Shortcuts tab (left) and Plasmoids tab (right)](docs/panel.png)
+
 ## Your system is not modified
 
 - plasma-arrange is a **copy of Plasma's original desktop package**
