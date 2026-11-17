@@ -54,8 +54,18 @@ ContainmentItem {
     property bool isContainment: Plasmoid.isContainment
     property bool inPanel: (Plasmoid.location !== PlasmaCore.Types.Floating)
     property bool useListViewMode: inPanel && Plasmoid.configuration.viewMode === 0
-    // Grid mode: show the arrangement grid and snap widgets to it (desktop only)
-    property bool gridMode: isContainment && !isFolder && Plasmoid.configuration.gridMode
+    // Grid mode: while the desktop is in edit mode, show the arrangement grid
+    // and snap widgets to it (desktop only, not Folder View)
+    property bool gridMode: isContainment && !isFolder && Plasmoid.containment.corona.editMode
+
+    // On the grid, a shortcut (Icon widget) fills its cell. It draws its icon in
+    // the frame width × (frame height minus its name, 1 or 2 lines). So all icons
+    // have the same size when the cell is at least 2 lines taller than wide:
+    // cell = icon size × (icon size + shortcutLabelHeight).
+    readonly property int shortcutLabelHeight: Math.ceil(labelMetrics.lineSpacing * 2)
+    // Icon size of a shortcut whose name takes 2 lines
+    readonly property int shortcutIconSize: Math.max(Kirigami.Units.iconSizes.small,
+        Math.min(Plasmoid.configuration.gridCellWidth, Plasmoid.configuration.gridCellHeight - shortcutLabelHeight))
 
     property Component appletAppearanceComponent
 
@@ -120,6 +130,74 @@ ContainmentItem {
         }
 
         return height;
+    }
+
+    // Gives every shortcut the size of a cell and snaps it to the grid,
+    // as if it had been dropped where it is
+    function resizeAllShortcuts(): void {
+        for (const item of appletsLayout.children) {
+            if (item.isShortcut) {
+                const geometry = item.dropGeometry(Qt.point(item.x, item.y));
+                item.x = geometry.x;
+                item.y = geometry.y;
+                item.width = geometry.width;
+                item.height = geometry.height;
+            }
+        }
+        saveLayoutLater();
+    }
+
+    // Sets the shortcut icon size, which is the cell width. The cell height must
+    // keep room for the icon and a 2 lines name:
+    // - wider: the height grows only if needed
+    // - narrower: the height shrinks by as much, but never below that room
+    // Every shortcut fills its new cell, keeping its column and row.
+    // Shortcuts stuck to the right or bottom edge stay stuck to it.
+    function setShortcutIconSize(size: int): void {
+        const oldCellWidth = appletsLayout.cellWidth;
+        const oldCellHeight = appletsLayout.cellHeight;
+        const cellWidth = size;
+        const minimumHeight = size + shortcutLabelHeight;
+        const cellHeight = size > oldCellWidth
+            ? Math.max(oldCellHeight, minimumHeight)
+            : Math.max(oldCellHeight - (oldCellWidth - size), minimumHeight);
+
+        Plasmoid.configuration.gridCellWidth = cellWidth;
+        Plasmoid.configuration.gridCellHeight = cellHeight;
+
+        for (const item of appletsLayout.children) {
+            if (!item.isShortcut) {
+                continue;
+            }
+            const onRightEdge = Math.abs(item.x + item.width - appletsLayout.width) < 1;
+            const onBottomEdge = Math.abs(item.y + item.height - appletsLayout.height) < 1;
+            const column = Math.round(item.x / oldCellWidth);
+            const row = Math.round(item.y / oldCellHeight);
+
+            item.width = cellWidth;
+            item.height = cellHeight;
+            item.x = onRightEdge ? appletsLayout.width - cellWidth
+                : Math.min(column * cellWidth, appletsLayout.width - cellWidth);
+            item.y = onBottomEdge ? appletsLayout.height - cellHeight
+                : Math.min(row * cellHeight, appletsLayout.height - cellHeight);
+        }
+        saveLayoutLater();
+    }
+
+    // Saves the widgets geometry once the move animations are over
+    function saveLayoutLater(): void {
+        saveLayoutTimer.restart();
+    }
+
+    Timer {
+        id: saveLayoutTimer
+        interval: Kirigami.Units.longDuration
+        onTriggered: root.appletsLayout.save()
+    }
+
+    FontMetrics {
+        id: labelMetrics
+        font: Kirigami.Theme.defaultFont
     }
 
     function isDrag(fromX, fromY, toX, toY) {
@@ -316,34 +394,85 @@ ContainmentItem {
             defaultItemWidth: Kirigami.Units.iconSizes.small * 6
             defaultItemHeight: Kirigami.Units.iconSizes.small * 6
 
+            // The occupied cells are not recomputed when the cell size changes:
+            // forget them, so they don't block drops at wrong places.
+            // Widgets don't move; each one takes its cells again when it is dropped.
+            onCellWidthChanged: releaseAllSpace()
+            onCellHeightChanged: releaseAllSpace()
+
+            function releaseAllSpace(): void {
+                for (const item of children) {
+                    if (item instanceof ContainmentLayoutManager.ItemContainer && item !== placeHolder) {
+                        releaseSpace(item);
+                    }
+                }
+            }
+
             eventManagerToFilter: (folderViewLayer.item as FolderViewLayer)?.view.view ?? null
 
             appletContainerComponent: ContainmentLayoutManager.BasicAppletContainer {
                 id: appletContainer
 
-                // In grid mode, every widget is put in edit mode (see below),
-                // so it can be dragged right away, without press and hold
                 editModeCondition: Plasmoid.immutable
                     ? ContainmentLayoutManager.ItemContainer.Locked
-                    : (root.gridMode
-                        ? ContainmentLayoutManager.ItemContainer.Manual
-                        : ContainmentLayoutManager.ItemContainer.AfterPressAndHold)
+                    : ContainmentLayoutManager.ItemContainer.AfterPressAndHold
 
-                Component.onCompleted: editMode = root.gridMode
+                readonly property bool isShortcut: applet?.plasmoid.pluginName === "org.kde.plasma.icon"
 
-                // A click on an empty area of the desktop takes every widget out of
-                // edit mode (AppletsLayout::handleReleaseEvent): stay in it while in grid mode
-                onEditModeChanged: {
-                    if (root.gridMode && !editMode) {
-                        Qt.callLater(() => appletContainer.editMode = root.gridMode);
+                // In grid mode, the drop geometry is computed here rather than by the
+                // layout, which would resize the widget to whole cells and ignores screen edges:
+                // - widgets keep their size, shortcuts fill one cell
+                // - the widget goes to the nearest grid line, or to the screen edge if closer
+                // The placeholder shows that same geometry while dragging.
+
+                property size sizeBeforeDrag
+                property point dragPosition // position while dragged, before any snapping
+                property bool dragged: false
+
+                onDragActiveChanged: {
+                    if (dragActive) {
+                        sizeBeforeDrag = Qt.size(width, height);
+                        return;
                     }
+                    if (!dragged) {
+                        return;
+                    }
+                    dragged = false;
+                    if (!root.gridMode) {
+                        return;
+                    }
+
+                    const geometry = dropGeometry(dragPosition);
+                    x = geometry.x;
+                    y = geometry.y;
+                    width = geometry.width;
+                    height = geometry.height;
+                    root.saveLayoutLater();
                 }
 
-                Connections {
-                    target: root
-                    function onGridModeChanged(): void {
-                        appletContainer.editMode = root.gridMode;
+                function dropGeometry(position: point): rect {
+                    const size = isShortcut
+                        ? Qt.size(appletsLayout.cellWidth, appletsLayout.cellHeight)
+                        : sizeBeforeDrag;
+
+                    const x = snap(position.x, appletsLayout.cellWidth, appletsLayout.width - size.width);
+                    const y = snap(position.y, appletsLayout.cellHeight, appletsLayout.height - size.height);
+                    return Qt.rect(x, y, size.width, size.height);
+                }
+
+                // Nearest grid line, or the edge (0 or max) if it is closer
+                function snap(position: real, cellSize: real, max: real): real {
+                    const onGrid = Math.round(position / cellSize) * cellSize;
+                    const toGrid = Math.abs(position - onGrid);
+                    if (Plasmoid.configuration.gridSnapToEdges) {
+                        if (position < toGrid) {
+                            return 0;
+                        }
+                        if (max - position < toGrid) {
+                            return max;
+                        }
                     }
+                    return Math.max(0, Math.min(onGrid, max));
                 }
 
                 configOverlaySource: "ConfigOverlay.qml"
@@ -382,6 +511,19 @@ ContainmentItem {
                 }
 
                 onUserDrag: (newPosition, dragCenter) => {
+                    dragPosition = newPosition;
+                    dragged = true;
+                    if (root.gridMode) {
+                        // Set directly: showPlaceHolderAt() would snap it to whole cells again
+                        const geometry = dropGeometry(newPosition);
+                        const placeHolder = appletsLayout.placeHolder;
+                        placeHolder.x = geometry.x;
+                        placeHolder.y = geometry.y;
+                        placeHolder.width = geometry.width;
+                        placeHolder.height = geometry.height;
+                        placeHolder.opacity = 1;
+                    }
+
                     const pos = mapToItem(root.parent, dragCenter.x, dragCenter.y);
                     const newCont = root.containmentItemAt(pos.x, pos.y);
                     // User likely touched screen edges, so ignore that.
@@ -483,13 +625,17 @@ ContainmentItem {
             onTriggered: Plasmoid.containment.configureRequested(Plasmoid)
         }
 
-        PlasmaCore.Action {
-            id: gridModeAction
-            text: i18nc("@action:inmenu", "Arrange on Grid")
-            icon.name: "view-grid"
-            checkable: true
-            checked: Plasmoid.configuration.gridMode
-            onTriggered: Plasmoid.configuration.gridMode = checked
+        GridPanel {
+            id: gridPanel
+            z: 1000 // above the widgets
+            visible: root.gridMode
+            // Top center by default; can then be moved by its title
+            x: Math.round((parent.width - width) / 2)
+            y: Kirigami.Units.gridUnit * 2
+            shortcutIconSize: root.shortcutIconSize
+            shortcutLabelHeight: root.shortcutLabelHeight
+            onResizeShortcutsRequested: root.resizeAllShortcuts()
+            onShortcutIconSizeRequested: size => root.setShortcutIconSize(size)
         }
 
         Component.onCompleted: {
@@ -509,10 +655,6 @@ ContainmentItem {
             }
 
             Plasmoid.setInternalAction("configure", configAction)
-
-            if (!root.isFolder) {
-                Plasmoid.contextualActions = [gridModeAction]
-            }
         }
     }
 }

@@ -15,10 +15,6 @@
       <default>false</default>
     </entry>
 
-    <entry name="gridMode" type="Bool">
-      <label>Whether the arrangement grid is shown and widgets snap to it.</label>
-      <default>false</default>
-    </entry>
     <entry name="gridCellWidth" type="Int">
       <label>Width of a grid cell, in pixels.</label>
       <default>112</default>
@@ -26,6 +22,10 @@
     <entry name="gridCellHeight" type="Int">
       <label>Height of a grid cell, in pixels.</label>
       <default>112</default>
+    </entry>
+    <entry name="gridSnapToEdges" type="Bool">
+      <label>Whether widgets dropped near a screen edge stick to it, even off the grid.</label>
+      <default>true</default>
     </entry>
 
     <entry name="ItemsGeometries" type="String" hidden="true">
