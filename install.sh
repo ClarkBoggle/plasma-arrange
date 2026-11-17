@@ -35,5 +35,8 @@ rm -rf "$TARGET"
 mv "$TARGET.new" "$TARGET"
 echo "Installed in $TARGET"
 
+# Start limit of the service (3 per minute) reset: several installs in a row
+# would otherwise leave the desktop stopped
+systemctl --user reset-failed plasma-plasmashell 2> /dev/null || true
 systemctl --user restart plasma-plasmashell
 echo "Desktop reloaded."

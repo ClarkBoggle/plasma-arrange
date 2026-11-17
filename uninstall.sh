@@ -9,6 +9,9 @@ OURS=contents/ui/GridArrange.qml
 
 if [ -L "$TARGET" ] || [ -f "$TARGET/$OURS" ]; then
     rm -rf "$TARGET"
+    # Start limit of the service (3 per minute) reset: several installs in a row
+    # would otherwise leave the desktop stopped
+    systemctl --user reset-failed plasma-plasmashell 2> /dev/null || true
     systemctl --user restart plasma-plasmashell
     echo "Uninstalled: Plasma uses the system desktop package again (desktop reloaded)."
 elif [ -e "$TARGET" ]; then
