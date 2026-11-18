@@ -36,6 +36,10 @@ fi
 # System package changed since ours was last merged with it (Plasma update, even
 # without a new version number): update first (update-plasma.sh merges the new
 # system package, then runs this script again)
+# (fresh clone: only origin/upstream exists, the local branch is created from it)
+if ! git rev-parse --quiet --verify refs/heads/upstream > /dev/null; then
+    git branch --quiet --track upstream origin/upstream
+fi
 upstream=$(mktemp -d)
 trap 'rm -rf "$upstream"' EXIT
 git archive upstream package | tar -x -C "$upstream"
