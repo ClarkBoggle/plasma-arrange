@@ -65,6 +65,9 @@ cd plasma-arrange
 ./install.sh
 ```
 
+Clone with git as above (not a ZIP download, which `install.sh` refuses): the
+updates for new Plasma versions are made with git, in the clone.
+
 `install.sh` builds the translations, copies `package/` to
 `~/.local/share/plasma/plasmoids/org.kde.desktopcontainment` and reloads the
 desktop. Nothing is changed outside your home folder.

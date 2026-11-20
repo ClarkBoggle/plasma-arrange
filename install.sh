@@ -13,6 +13,13 @@ OURS=contents/ui/GridArrange.qml
 
 cd "$(dirname "$0")"
 
+# Downloaded as a ZIP: updates for new Plasma versions need a git clone
+if [ "$(git rev-parse --show-toplevel 2> /dev/null)" != "$(pwd -P)" ]; then
+    echo "This folder is not a git clone (downloaded as a ZIP?). Install with:" >&2
+    echo "    git clone https://github.com/ClarkBoggle/plasma-arrange.git" >&2
+    exit 1
+fi
+
 for tool in xgettext msgmerge msgcat msgunfmt msgfmt; do
     if ! command -v "$tool" > /dev/null; then
         echo "Missing $tool: install gettext first." >&2
@@ -36,9 +43,14 @@ fi
 # System package changed since ours was last merged with it (Plasma update, even
 # without a new version number): update first (update-plasma.sh merges the new
 # system package, then runs this script again)
-# (fresh clone: only origin/upstream exists, the local branch is created from it)
+# Fresh, shallow or single-branch clone (e.g. git clone --depth 1): the local
+# upstream branch is created, fetched if needed
 if ! git rev-parse --quiet --verify refs/heads/upstream > /dev/null; then
-    git branch --quiet --track upstream origin/upstream
+    if git rev-parse --quiet --verify refs/remotes/origin/upstream > /dev/null; then
+        git branch --quiet --track upstream origin/upstream
+    else
+        git fetch --quiet origin "refs/heads/upstream:refs/heads/upstream" "refs/tags/plasma-*:refs/tags/plasma-*"
+    fi
 fi
 upstream=$(mktemp -d)
 trap 'rm -rf "$upstream"' EXIT
